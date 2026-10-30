@@ -1,0 +1,199 @@
+
+name: ARAPKBUILD Android APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ARAPKBUILD Android App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout ARAPKBUILD Project
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK Components
+        run: |
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Create ARAPKBUILD Android Project
+        shell: bash
+        run: |
+          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/java/com/arapkbuild/app
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = "ARAPKBUILD"
+          include ':app'
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.arapkbuild.app'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.arapkbuild.app'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET"/>
+
+              <application
+                  android:label="ARAPKBUILD"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:usesCleartextTraffic="false">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/arapkbuild/app/MainActivity.java <<'EOF'
+          package com.arapkbuild.app;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  WebView webView = new WebView(this);
+
+                  webView.getSettings().setJavaScriptEnabled(true);
+                  webView.getSettings().setDomStorageEnabled(true);
+                  webView.setWebViewClient(new WebViewClient());
+
+                  setContentView(webView);
+
+                  webView.loadUrl(
+                      "file:///android_asset/index.html"
+                  );
+              }
+          }
+          EOF
+
+          if [ -f web-project/index.html ]; then
+              cp -r web-project/. app/src/main/assets/
+          else
+              cat > app/src/main/assets/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport"
+                    content="width=device-width, initial-scale=1.0">
+              <title>ARAPKBUILD</title>
+              <style>
+                  body {
+                      background: #101827;
+                      color: white;
+                      font-family: Arial, sans-serif;
+                      text-align: center;
+                      padding: 40px 15px;
+                  }
+
+                  h1 {
+                      color: #54e0bb;
+                  }
+              </style>
+          </head>
+          <body>
+              <h1>ARAPKBUILD</h1>
+              <p>Your Android application is ready.</p>
+          </body>
+          </html>
+          EOF
+          fi
+
+      - name: Build Release APK
+        run: gradle --no-daemon assembleRelease
+
+      - name: Verify APK Signature
+        run: |
+          APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+
+          test -s "$APK"
+
+          echo "Checking APK signature..."
+
+          jarsigner -verify -verbose -certs "$APK"
+
+          echo "APK file created successfully."
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arapkbuild-android-apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 7
