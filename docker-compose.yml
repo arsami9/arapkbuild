@@ -1,0 +1,20 @@
+services:
+  wevlo-build-server:
+    build: ./build-server
+    container_name: wevlo-build-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+      RETENTION_HOURS: ${RETENTION_HOURS:-12}
+      BUILDS_PER_IP_PER_HOUR: ${BUILDS_PER_IP_PER_HOUR:-10}
+      WORK_DIR: /tmp/wevlo-builds
+    volumes:
+      - wevlo-builds:/tmp/wevlo-builds
+    # Android builds need memory; 4 GB RAM is a practical starting point.
+volumes:
+  wevlo-builds:

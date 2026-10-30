@@ -1,0 +1,1594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A1022">
+<meta name="description" content="Responsive Android APK builder for mobile and desktop browsers">
+<title>AR APK BUILD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: persistent left rail + sticky top bar + content column. Mobile swaps the rail for a drawer and a bottom nav.
+   Boldness lives in one place: the dark blueprint hero with the build-conveyor canvas. Everything else stays quiet. */
+:root{
+  --bg:#F1F3F9; --surface:#FFFFFF; --surface2:#F5F7FC; --ink:#0B1124; --muted:#5A6482; --line:#DCE1EE;
+  --accent:#2F4BFF; --accent-soft:#E6EAFF; --signal:#FF5A36; --good:#0E9F55; --warn:#B87400; --bad:#D4304A;
+  --hero:#0A1022; --hero-line:rgba(130,150,255,.14);
+  --shadow:0 1px 2px rgba(11,17,36,.06),0 10px 28px rgba(11,17,36,.07);
+  --code-bg:#F7F9FE; --code-fg:#1B2340; --code-gut:#8A93B2; --c-kw:#6B3FD6; --c-str:#0E7A4A; --c-com:#8A93B2; --c-num:#C2410C; --c-tag:#1F44E0; --c-attr:#B4256B; --c-fn:#0B6FA8; --c-type:#A15C00;
+  --f-display:'Unbounded','Trebuchet MS',sans-serif; --f-body:'Manrope','Segoe UI',system-ui,sans-serif; --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --r:16px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#070B18; --surface:#0E152E; --surface2:#131C3B; --ink:#E9EDFB; --muted:#8F9ABF; --line:#222C54;
+  --accent:#6580FF; --accent-soft:#18225A; --signal:#FF7A59; --good:#34D17E; --warn:#F0B33A; --bad:#FF6B80;
+  --hero:#050914; --hero-line:rgba(130,150,255,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  --code-bg:#0A1022; --code-fg:#D6DDF5; --code-gut:#5C6690; --c-kw:#B497FF; --c-str:#5FE0A1; --c-com:#667096; --c-num:#FFA779; --c-tag:#7C95FF; --c-attr:#FF8FC1; --c-fn:#6CCBFF; --c-type:#F2C46D;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#070B18; --surface:#0E152E; --surface2:#131C3B; --ink:#E9EDFB; --muted:#8F9ABF; --line:#222C54;
+  --accent:#6580FF; --accent-soft:#18225A; --signal:#FF7A59; --good:#34D17E; --warn:#F0B33A; --bad:#FF6B80;
+  --hero:#050914; --hero-line:rgba(130,150,255,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  --code-bg:#0A1022; --code-fg:#D6DDF5; --code-gut:#5C6690; --c-kw:#B497FF; --c-str:#5FE0A1; --c-com:#667096; --c-num:#FFA779; --c-tag:#7C95FF; --c-attr:#FF8FC1; --c-fn:#6CCBFF; --c-type:#F2C46D;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:90;background:var(--surface)}
+h1,h2,h3,p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent);text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ic{flex:none}
+small{color:var(--muted)}
+code,.mono{font-family:var(--f-mono)}
+
+/* Explicit responsive mode switch: Auto follows device width, Mobile and Desktop are user-selectable. */
+html[data-layout="mobile"] .app{grid-template-columns:minmax(0,1fr)}
+html[data-layout="mobile"] .side{position:fixed;left:0;top:env(safe-area-inset-top,0px);bottom:0;height:auto;width:min(290px,84vw);z-index:95;transform:translateX(-105%);transition:transform .26s cubic-bezier(.3,.8,.3,1);box-shadow:0 0 60px rgba(0,0,0,.4)}
+html[data-layout="mobile"] .side.open{transform:none}
+html[data-layout="mobile"] .scrim.open{display:block;position:fixed;inset:0;z-index:94;background:rgba(5,9,22,.5)}
+html[data-layout="mobile"] .menu-btn{display:grid}
+html[data-layout="mobile"] .page{padding-bottom:104px}
+html[data-layout="mobile"] .bnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+html[data-layout="mobile"] .bnav a,html[data-layout="mobile"] .bnav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:var(--muted);font-size:10.5px;font-weight:700;padding:4px 0}
+html[data-layout="mobile"] .auth{grid-template-columns:1fr}
+html[data-layout="desktop"] .app{grid-template-columns:262px minmax(0,1fr)}
+html[data-layout="desktop"] .side{position:sticky;top:0;height:100vh;transform:none}
+html[data-layout="desktop"] .menu-btn,html[data-layout="desktop"] .bnav{display:none!important}
+html[data-layout="desktop"] .scrim{display:none!important}
+.layout-select{height:36px;max-width:120px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 7px;font-size:11px;font-weight:700}
+@media(max-width:959px){html[data-layout="desktop"] .page{padding-left:12px;padding-right:12px}html[data-layout="desktop"] .app{grid-template-columns:210px minmax(0,1fr)}html[data-layout="desktop"] .side{position:sticky;transform:none;width:auto;height:100vh;z-index:2}}
+
+/* shell */
+.app{display:grid;grid-template-columns:262px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow:auto;background:var(--surface);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:14px}
+.brand{display:flex;align-items:center;gap:11px;color:var(--ink);padding:2px 6px}
+.brand b{font-family:var(--f-display);font-size:15px;letter-spacing:-.01em;line-height:1.1;display:block}
+.brand i{font-style:normal;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.ucard{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);min-width:0}
+.ucard>div{min-width:0}.ucard b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ucard small{display:block;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ucard.guest{justify-content:space-between}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,var(--accent),var(--signal));color:#fff;font-weight:800;font-size:12px}
+.side nav{display:flex;flex-direction:column;gap:2px}
+.side hr{border:0;border-top:1px solid var(--line);margin:8px 4px}
+.nav{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;color:var(--muted);font-weight:600;font-size:13.5px}
+.nav:hover{background:var(--surface2);color:var(--ink)}
+.nav.on{background:var(--accent-soft);color:var(--accent)}
+.nav.admin{color:var(--signal)}
+.col{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;align-items:center;gap:10px;padding:10px 16px;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.top .grow{flex:1;min-width:0}
+.search{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);max-width:420px}
+.search input{border:0;background:none;outline:0;min-width:0;width:100%;color:var(--ink)}
+.iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--muted);flex:none}
+.iconbtn:hover{color:var(--ink)}
+.menu-btn{display:none}
+.page{padding:22px 16px 40px;width:100%;max-width:1200px;margin:0 auto}
+.scrim{display:none}
+.bnav{display:none}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:13.5px;transition:transform .15s,box-shadow .15s,background .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.btn-sm{min-height:32px;padding:0 12px;font-size:12.5px;border-radius:10px}
+.btn-lg{min-height:50px;font-size:15px;border-radius:14px}
+.btn-primary{background:var(--accent);border-color:transparent;color:#fff;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 32%,transparent)}
+.btn-signal{background:var(--signal);border-color:transparent;color:#fff}
+.btn-danger{color:var(--bad)}
+.btn-block{width:100%}
+.btn-white{background:#fff;color:#1A2BD0;border-color:transparent;min-height:50px;font-size:15px}
+.btn-glass{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.22);color:#fff;min-height:50px;font-size:15px;backdrop-filter:blur(6px)}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.lbl{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.input{width:100%;min-height:44px;padding:0 13px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);outline:0;transition:border-color .15s,box-shadow .15s}
+textarea.input{padding:11px 13px;min-height:84px;resize:vertical}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 16%,transparent);background:var(--surface)}
+.input.bad{border-color:var(--bad)}
+.hint{font-size:11.5px;color:var(--muted)}
+.err{color:var(--bad);font-size:12.5px;font-weight:600;min-height:18px}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pw{position:relative}.pw .input{padding-right:46px}.pw button{position:absolute;right:4px;top:4px;width:36px;height:36px;border:0;background:none;color:var(--muted);border-radius:10px}
+.meter{display:flex;gap:4px;margin-top:2px}.meter i{flex:1;height:4px;border-radius:3px;background:var(--line)}.meter i.on{background:var(--bad)}.meter[data-s="3"] i.on,.meter[data-s="4"] i.on{background:var(--good)}.meter[data-s="2"] i.on{background:var(--warn)}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.03em;background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+.badge.good{color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--surface));border-color:transparent}
+.badge.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,var(--surface));border-color:transparent}
+.badge.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface));border-color:transparent}
+.badge.info{color:var(--accent);background:var(--accent-soft);border-color:transparent}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 12px}
+.sec-h h2{font-family:var(--f-display);font-size:16px;font-weight:700;letter-spacing:-.01em}
+.sec-h a,.linkbtn{font-weight:800;font-size:13px;color:var(--accent);background:none;border:0;padding:0;display:inline-flex;align-items:center;gap:4px}
+.phead{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.phead h1{font-family:var(--f-display);font-size:clamp(20px,4.2vw,28px);letter-spacing:-.02em;line-height:1.15}
+.phead p{color:var(--muted);margin-top:2px}
+.pico{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.empty{display:grid;place-items:center;text-align:center;gap:10px;padding:40px 20px;border:1.5px dashed var(--line);border-radius:20px;color:var(--muted)}
+.empty h3{color:var(--ink);font-family:var(--f-display);font-size:16px}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--warn) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);margin-bottom:16px;font-weight:600}
+.banner.info{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border-radius:28px;background:var(--hero);color:#fff;padding:28px 22px 24px;isolation:isolate;min-height:300px;display:flex;align-items:flex-end;box-shadow:var(--shadow)}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.hero-in{position:relative;width:100%}
+.eyebrow{display:inline-block;font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#9FB0FF;margin-bottom:10px}
+.hero h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,5.4vw,44px);line-height:1.1;letter-spacing:-.025em;text-wrap:balance;max-width:16ch;margin-bottom:10px}
+.hero p{color:#B4C0E8;max-width:44ch;margin-bottom:20px}
+.hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:480px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.stat{display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;min-width:0}
+.stat .si{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;flex:none}
+.stat b{display:block;font-family:var(--f-display);font-size:21px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat small{display:block}
+.si.a{background:var(--accent-soft);color:var(--accent)}.si.g{background:color-mix(in srgb,var(--good) 14%,var(--surface));color:var(--good)}.si.w{background:color-mix(in srgb,var(--warn) 16%,var(--surface));color:var(--warn)}.si.s{background:color-mix(in srgb,var(--signal) 14%,var(--surface));color:var(--signal)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.step{padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.step i{font-style:normal;font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:500}
+.step h3{font-size:15px;margin:6px 0 4px}.step p{color:var(--muted);font-size:13px}
+.feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.feat{display:flex;gap:12px;padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+.feat .pico{width:38px;height:38px;border-radius:12px}.feat b{display:block;font-size:13.5px}.feat small{font-size:12.5px}
+
+/* projects */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.pnew{display:grid;place-items:center;gap:8px;border:1.5px dashed var(--line);border-radius:20px;background:transparent;color:var(--muted);min-height:200px;font-weight:700}
+.pnew:hover{border-color:var(--accent);color:var(--accent)}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
+.cover{--c1:#4F6BFF;--c2:#2236C9;--cov:#2236C9;position:relative;height:118px;display:grid;place-items:center;background:linear-gradient(135deg,var(--c1),var(--c2))}
+.cover svg{width:66px;height:66px;opacity:.94}
+.cv-html{--c1:#5B74FF;--c2:#2437C7;--cov:#2437C7}.cv-blank{--c1:#7A6BF0;--c2:#4A33B8;--cov:#4A33B8}.cv-native{--c1:#2FC17D;--c2:#0E7C53;--cov:#0E7C53}.cv-webview{--c1:#FF8A5C;--c2:#D93E1E;--cov:#D93E1E}
+.tbadge{position:absolute;top:10px;right:10px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;background:rgba(10,16,34,.55);color:#fff;border-radius:99px;padding:3px 9px}
+.fcount{position:absolute;left:10px;bottom:9px;font-size:11px;color:#fff;opacity:.9;font-weight:700}
+.pbody{padding:12px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.pbody h3{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbody small{display:flex;align-items:center;gap:5px;font-size:12px}
+.prow{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-top:4px}
+.blist{display:flex;flex-direction:column;gap:8px}
+.bitem{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.bitem .grow{flex:1;min-width:0}.bitem b{display:block;font-size:13.5px}.bitem small{font-size:12px}
+
+/* modal / toast */
+.modal-bg{position:fixed;inset:0;z-index:100;background:rgba(5,9,22,.58);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px;animation:fade .18s ease}
+.modal{width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border-radius:26px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.35);animation:pop .22s cubic-bezier(.2,.9,.3,1.2)}
+.modal.wide{width:min(760px,100%)}
+.mh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.mh h2{font-family:var(--f-display);font-size:18px;letter-spacing:-.01em}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.opt{display:block;cursor:pointer}.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;text-align:center;border:1.5px solid var(--line);border-radius:16px;background:var(--surface2);height:100%}
+.opt span em{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--surface);color:var(--muted);font-style:normal;margin-bottom:2px}
+.opt span b{font-size:14px}.opt span small{font-size:12px}
+.opt input:checked+span{border-color:var(--accent);background:var(--accent-soft)}.opt input:checked+span em{color:var(--accent)}
+.opt input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+#toasts{position:fixed;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:120;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 16px}
+.toast{background:#0B1124;color:#fff;padding:11px 16px;border-radius:14px;font-weight:700;font-size:13px;box-shadow:0 12px 30px rgba(0,0,0,.35);display:flex;gap:8px;align-items:center;animation:rise .25s ease;max-width:440px}
+.toast.err{background:#B3243C}.toast.ok{background:#0B6B3A}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:130;width:100%;height:100%}
+@keyframes fade{from{opacity:0}}@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.96)}}@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes blink{50%{opacity:.25}}
+
+/* auth */
+.auth{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:100vh}
+.auth-art{position:relative;background:var(--hero);color:#fff;padding:36px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;isolation:isolate}
+.auth-art canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.auth-art h2{font-family:var(--f-display);font-size:clamp(24px,3.4vw,38px);line-height:1.12;letter-spacing:-.02em;max-width:14ch;margin:0 0 10px}
+.auth-art p{color:#B4C0E8;max-width:38ch}
+.auth-art .brand{color:#fff}.auth-art .brand i{color:#9FB0FF}
+.auth-form{display:grid;place-items:center;padding:28px 16px;background:var(--bg)}
+.auth-box{width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
+.auth-box h1{font-family:var(--f-display);font-size:24px;letter-spacing:-.02em}
+.seg{display:flex;gap:4px;padding:4px;background:var(--surface2);border:1px solid var(--line);border-radius:14px;margin-bottom:16px}
+.seg button{flex:1;min-height:38px;border:0;background:none;border-radius:10px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px}
+.seg button.on{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(11,17,36,.12)}
+.chk{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--muted)}.chk input{margin-top:3px;accent-color:var(--accent)}
+
+/* build page */
+.bgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.bform{display:flex;flex-direction:column;gap:14px;min-width:0}
+.bside{position:sticky;top:calc(env(safe-area-inset-top,0px) + 74px);display:flex;flex-direction:column;gap:12px}
+.bsec{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.bsec>header,.bsec>summary{display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:800;font-size:14px;background:var(--surface2);list-style:none;cursor:default}
+details.bsec>summary{cursor:pointer}
+.bsec>summary::-webkit-details-marker{display:none}
+.bsec header i,.bsec summary i{font-style:normal;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;flex:none}
+.bsec summary .opt-t{font-weight:600;color:var(--muted);font-size:12px;margin-left:auto;display:flex;align-items:center;gap:6px}
+.bbody{padding:16px;display:flex;flex-direction:column;gap:14px}
+.grp{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:-4px}
+.tgs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tg{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);cursor:pointer;min-width:0}
+.tg>span{min-width:0}.tg b{display:block;font-size:13px}.tg small{font-size:11.5px;display:block}
+.tg.on{border-color:var(--accent);background:var(--accent-soft)}
+.tg input{position:absolute;opacity:0;pointer-events:none}
+.sw{width:42px;height:24px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.tg input:checked~.sw{background:var(--accent)}.tg input:checked~.sw::after{transform:translateX(18px)}
+.tg input:focus-visible~.sw{outline:2px solid var(--accent);outline-offset:2px}
+.tg.locked{opacity:.75}
+.upl{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:112px;border:1.5px dashed var(--line);border-radius:16px;background:var(--surface2);cursor:pointer;text-align:center;font-size:12px;color:var(--muted);padding:10px}
+.upl img{width:56px;height:56px;border-radius:14px;object-fit:cover}.upl b{color:var(--ink);font-size:12.5px}
+.upl:hover{border-color:var(--accent)}
+.colorrow{display:flex;gap:10px;align-items:center}.colorrow input[type=color]{width:44px;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);padding:3px;flex:none}
+.pv{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.pv-ic{width:76px;height:76px;border-radius:20px;display:grid;place-items:center;overflow:hidden;color:#fff;font-family:var(--f-display);font-size:28px;margin-bottom:4px}
+.pv-ic img{width:100%;height:100%;object-fit:cover}
+.pv b{font-size:15px}.pv code{font-size:11px;color:var(--muted);word-break:break-all}
+.pv dl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;margin:10px 0 4px;padding-top:12px;border-top:1px solid var(--line)}
+.pv dt{font-size:10.5px;color:var(--muted)}.pv dd{margin:0;font-weight:800;font-size:12.5px}
+.pv .deep{width:100%;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);background:var(--surface2);border:1px dashed var(--line);border-radius:10px;padding:7px 8px;word-break:break-all}
+.proflag{font-size:10px;font-weight:800;letter-spacing:.08em;background:var(--accent-soft);color:var(--accent);padding:2px 7px;border-radius:6px}
+
+/* console */
+.cons{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.cstat{position:relative;border-radius:22px;padding:20px;color:#fff;background:linear-gradient(135deg,#3149F0,#1B2AB0);overflow:hidden}
+.cstat.fail{background:linear-gradient(135deg,#C02A45,#7A1429)}
+.cstat h2{font-family:var(--f-display);font-size:17px;margin-bottom:2px}
+.cstat p{opacity:.8;font-size:12.5px}
+.cstat .tm{position:absolute;right:16px;top:16px;font-family:var(--f-mono);background:rgba(255,255,255,.16);padding:5px 10px;border-radius:10px;font-size:13px}
+.cstat .live{position:absolute;right:20px;top:48px;font-size:10px;letter-spacing:.14em;opacity:.85}
+.spin{width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;animation:spin .9s linear infinite;flex:none}
+.chead{display:flex;gap:14px;align-items:center;margin-bottom:18px;padding-right:90px}
+.track{display:flex;align-items:flex-start}
+.tn{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;font-size:11px;font-weight:700;opacity:.65}
+.tn::before{content:"";position:absolute;top:11px;left:-50%;width:100%;height:2px;background:rgba(255,255,255,.3)}
+.tn:first-child::before{display:none}
+.tn i{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:grid;place-items:center;position:relative;z-index:1}
+.tn.done{opacity:1}.tn.done i{background:#fff;color:#2036D8}.tn.done::before{background:#fff}
+.tn.now{opacity:1}.tn.now i{background:#fff;box-shadow:0 0 0 5px rgba(255,255,255,.25)}
+.term{background:#0A0F1F;border-radius:16px;overflow:hidden;border:1px solid #1B2548}
+.term header{display:flex;align-items:center;gap:7px;padding:10px 12px;background:#10172F}
+.term header i{width:10px;height:10px;border-radius:50%}
+.term header span{font-family:var(--f-mono);font-size:11px;color:#8590B8;margin-right:auto;margin-left:6px}
+.term header button{background:#1A2348;border:0;border-radius:7px;color:#9AA5CC;font-family:var(--f-mono);font-size:10.5px;padding:4px 8px}
+.tlog{padding:12px 14px;font-family:var(--f-mono);font-size:11.5px;line-height:1.75;color:#C5CDEE;max-height:260px;overflow:auto}
+.tlog span{color:#566090;margin-right:8px}.tlog .e{color:#FF8CA0}.tlog .ok{color:#5FE0A1}
+.demo-note{font-size:12.5px;display:flex;gap:9px;align-items:flex-start}
+.done-modal{padding:0;overflow:hidden;width:min(380px,100%)}
+.dm-top{background:linear-gradient(135deg,#1FBF72,#0F8F50);color:#fff;text-align:center;padding:26px 20px 34px}
+.dm-top .pico{background:rgba(255,255,255,.2);color:#fff;margin:0 auto 10px;width:58px;height:58px;border-radius:18px}
+.dm-top small{color:#fff;opacity:.8;letter-spacing:.14em;font-weight:800;font-size:10.5px}.dm-top h2{font-family:var(--f-display);font-size:20px}
+.dm-body{background:var(--surface);margin-top:-18px;border-radius:20px 20px 0 0;padding:18px;display:flex;flex-direction:column;gap:12px;position:relative}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}.kv span{color:var(--muted)}.kv b{text-align:right;word-break:break-all}
+
+/* editor */
+.edtool{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px;border-bottom:1px solid var(--line);background:var(--surface)}
+.edtool .nm{font-weight:800;font-size:13.5px;margin-right:auto;display:flex;align-items:center;gap:8px;min-width:0}
+.edtool .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.edshell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface);height:calc(100vh - 150px);min-height:520px}
+.edcol{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.files{display:none;overflow:auto;background:var(--surface2);border-bottom:1px solid var(--line);max-height:190px;padding:8px}
+.edshell.f .files{display:block}
+.files h4{margin:4px 6px 8px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+.fl{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;font-size:12.5px;font-family:var(--f-mono);cursor:pointer;color:var(--muted)}
+.fl.on{background:var(--accent-soft);color:var(--accent)}
+.fl span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl button{border:0;background:none;color:var(--muted);padding:2px;display:grid;place-items:center;border-radius:6px}.fl button:hover{color:var(--bad)}
+.panes{flex:1;min-height:0;display:flex}
+.codepane,.prevpane{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.edshell[data-pane="code"] .prevpane{display:none}.edshell[data-pane="prev"] .codepane{display:none}
+.tabs{display:flex;overflow-x:auto;background:var(--surface2);border-bottom:1px solid var(--line);scrollbar-width:none}
+.tab{display:flex;align-items:center;gap:7px;padding:9px 12px;font-family:var(--f-mono);font-size:12px;color:var(--muted);border-right:1px solid var(--line);white-space:nowrap;cursor:pointer;flex:none}
+.tab.on{background:var(--code-bg);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+.tab button{border:0;background:none;color:inherit;opacity:.6;padding:0;display:grid}
+.ed{--fs:13px;flex:1;min-height:0;display:flex;background:var(--code-bg);position:relative;font:var(--fs)/calc(var(--fs)*1.65) var(--f-mono)}
+.gut{width:44px;flex:none;overflow:hidden;color:var(--code-gut);text-align:right;padding:12px 8px 12px 0;white-space:pre;user-select:none;border-right:1px solid var(--line)}
+.stack{position:relative;flex:1;min-width:0}
+.stack pre,.stack textarea{position:absolute;inset:0;margin:0;padding:12px;font:inherit;tab-size:2;white-space:pre;border:0;width:100%;height:100%}
+.stack pre{overflow:hidden;color:var(--code-fg);pointer-events:none}
+.stack textarea{background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--ink);resize:none;outline:0;overflow:auto}
+.binfile{display:grid;place-items:center;flex:1;color:var(--muted);text-align:center;padding:20px;gap:8px}
+.t-kw{color:var(--c-kw)}.t-str{color:var(--c-str)}.t-com{color:var(--c-com);font-style:italic}.t-num{color:var(--c-num)}.t-tag{color:var(--c-tag)}.t-attr{color:var(--c-attr)}.t-fn{color:var(--c-fn)}.t-type{color:var(--c-type)}
+.pvhead{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface2);font-size:12px;font-weight:800}
+.pvhead span{margin-right:auto;display:flex;align-items:center;gap:7px}
+.pvhead .live{width:7px;height:7px;border-radius:50%;background:var(--good);animation:blink 1.6s infinite}
+.pvstage{flex:1;min-height:0;display:grid;place-items:stretch;background:repeating-conic-gradient(var(--surface2) 0 25%,var(--bg) 0 50%) 0 0/18px 18px;overflow:auto}
+.pvstage iframe{border:0;background:#fff;width:100%;height:100%}
+.pvstage.dev{place-items:center;padding:14px}
+.pvstage.dev iframe{width:360px;max-width:100%;height:min(640px,100%);border-radius:28px;border:8px solid #10162E;box-shadow:0 14px 40px rgba(0,0,0,.3)}
+.cons-p{max-height:130px;overflow:auto;background:var(--code-bg);border-top:1px solid var(--line);font-family:var(--f-mono);font-size:11.5px;padding:8px 10px;color:var(--code-fg)}
+.cons-p div{padding:2px 0}.cons-p .error{color:var(--bad)}.cons-p .warn{color:var(--warn)}
+.nativebox{padding:20px;display:flex;flex-direction:column;gap:12px;overflow:auto}
+.tree{font-family:var(--f-mono);font-size:12px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px;line-height:1.9;overflow:auto}
+
+/* store, tables, misc */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+.chip{flex:none;height:34px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:13px;color:var(--muted)}
+.chip.on{background:var(--ink);color:var(--bg);border-color:transparent}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.tcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
+.tart{height:120px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));position:relative}
+.tart .ic{width:44px;height:44px;opacity:.92}.tart .tbadge{left:10px;right:auto}
+.tinfo{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}.tinfo h3{font-size:15px}.tinfo p{color:var(--muted);font-size:12.5px;flex:1}
+.tinfo .prow{grid-template-columns:1fr 1fr}
+.feature{display:flex;align-items:center;gap:16px;justify-content:space-between;padding:20px;border-radius:22px;background:var(--hero);color:#fff;margin-bottom:16px;flex-wrap:wrap}
+.feature h2{font-family:var(--f-display);font-size:18px;margin-bottom:4px}.feature p{color:#B4C0E8;max-width:46ch}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.tbl{width:100%;border-collapse:collapse;min-width:640px;font-size:13px}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:11px 14px;background:var(--surface2);border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.act{white-space:nowrap;text-align:right}
+.tbl td.act .btn{margin-left:4px}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.plan{display:flex;flex-direction:column;gap:12px;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:22px}
+.plan.hot{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
+.plan h3{font-family:var(--f-display);font-size:16px}.plan .pr{font-family:var(--f-display);font-size:30px;letter-spacing:-.02em}.plan .pr small{font-family:var(--f-body);font-size:13px}
+.plan ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;flex:1}.plan li{display:flex;gap:8px;font-size:13px}.plan li .ic{color:var(--good);margin-top:2px}
+.walletcard{background:var(--hero);color:#fff;border-radius:24px;padding:22px;display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.walletcard small{color:#9FB0FF;font-family:var(--f-mono);letter-spacing:.14em;text-transform:uppercase;font-size:11px}
+.walletcard b{display:block;font-family:var(--f-display);font-size:34px;letter-spacing:-.02em}
+.twocol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.atabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;scrollbar-width:none}
+.atabs button{flex:none;height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.atabs button.on{background:var(--accent);border-color:transparent;color:#fff}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:10px;font-family:var(--f-mono)}
+.hbar{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}.hbar div{height:8px;border-radius:5px;background:var(--surface2);overflow:hidden}.hbar i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.hbar span{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700}
+.faq{display:flex;flex-direction:column;gap:8px}.faq details{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:0 14px}.faq summary{cursor:pointer;padding:13px 0;font-weight:700}.faq p{padding:0 0 13px;color:var(--muted)}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.tool{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:18px;border:1px solid var(--line);border-radius:20px;background:var(--surface)}
+.tool h3{font-size:15px}.tool p{color:var(--muted);font-size:13px;flex:1}
+.pre{font-family:var(--f-mono);font-size:11.5px;background:var(--code-bg);color:var(--code-fg);border:1px solid var(--line);border-radius:14px;padding:14px;overflow:auto;white-space:pre;max-height:340px}
+
+@media (max-width:1099px){.bgrid{grid-template-columns:minmax(0,1fr)}.bside{position:static;order:-1}.plans{grid-template-columns:1fr}.twocol{grid-template-columns:1fr}}
+@media (min-width:1100px){
+  .edshell{flex-direction:row}
+  .edshell .edcol{flex:1;min-width:0;display:flex;flex-direction:column}
+  .files{display:block;width:200px;max-height:none;border-bottom:0;border-right:1px solid var(--line);flex:none}
+  .edshell[data-pane="code"] .prevpane,.edshell[data-pane="prev"] .codepane{display:flex}
+  .prevpane{border-left:1px solid var(--line)}
+  .panes{flex:1}
+  .paneseg{display:none}
+}
+@media (max-width:959px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;left:0;top:env(safe-area-inset-top,0px);bottom:0;height:auto;width:min(290px,84vw);z-index:95;transform:translateX(-105%);transition:transform .26s cubic-bezier(.3,.8,.3,1);box-shadow:0 0 60px rgba(0,0,0,.4)}
+  .side.open{transform:none}
+  .scrim.open{display:block;position:fixed;inset:0;z-index:94;background:rgba(5,9,22,.5);animation:fade .2s}
+  .menu-btn{display:grid}
+  .page{padding-bottom:104px}
+  .bnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+  .bnav a,.bnav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:var(--muted);font-size:10.5px;font-weight:700;padding:4px 0}
+  .bnav .on{color:var(--accent)}
+  .bnav .mid span{width:44px;height:44px;margin-top:-18px;border-radius:15px;background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 40%,transparent)}
+  #toasts{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .auth{grid-template-columns:1fr}.auth-art{min-height:240px;padding:24px}
+  .steps,.feats{grid-template-columns:1fr}
+  .edshell{height:calc(100vh - 160px)}
+}
+@media (max-width:560px){.tgs,.row2{grid-template-columns:1fr}.hero{padding:22px 16px 18px}.stat b{font-size:19px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+.chart .bar{fill:var(--accent)}.chart .bar.f{fill:var(--bad)}.chart .gl{stroke:var(--line);stroke-width:1}
+.hbar span b{font-weight:700;text-transform:capitalize}
+</style>
+</head>
+<body>
+<div id="root"></div><div id="layer"></div><div id="toasts" aria-live="polite"></div><canvas id="fx" aria-hidden="true"></canvas>
+<input type="file" id="zipin" accept=".zip,application/zip" hidden>
+<input type="file" id="filein" multiple hidden>
+<noscript>AR APK BUILD needs JavaScript to run.</noscript>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+'use strict';
+/* ---------- starter files & store templates ---------- */
+const page=(t,css,body,js)=>'<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<title>'+t+'</title>\n<style>\n'+css+'\n</style>\n</head>\n<body>\n'+body+'\n<script>\n'+js+'\n<\/script>\n</body>\n</html>\n';
+
+const T_CALC=page('Calculator',
+`*{box-sizing:border-box;margin:0}
+body{background:#10131f;color:#fff;font-family:system-ui,sans-serif;display:flex;flex-direction:column;justify-content:flex-end;min-height:100vh;padding:16px}
+#exp{color:#8a93b5;text-align:right;min-height:24px}
+#out{font-size:54px;text-align:right;padding:6px 8px 22px;word-break:break-all}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+button{border:0;border-radius:18px;padding:20px 0;font-size:22px;background:#1b2036;color:#fff}
+button.op{background:#2f4bff}button.fn{background:#2a3050}button.eq{background:#ff5a36}`,
+'<div id="exp"></div><div id="out">0</div><div class="g" id="g"></div>',
+`var keys=['C','±','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','0','.','⌫','='];
+var cur='',g=document.getElementById('g'),out=document.getElementById('out'),exp=document.getElementById('exp');
+keys.forEach(function(k){var b=document.createElement('button');b.textContent=k;
+  if('÷×−+'.indexOf(k)>-1)b.className='op';else if(k==='=')b.className='eq';else if('C±%⌫'.indexOf(k)>-1)b.className='fn';
+  b.onclick=function(){press(k)};g.appendChild(b)});
+function calc(s){
+  var raw=s.replace(/÷/g,'/').replace(/×/g,'*').replace(/−/g,'-').match(/[0-9.]+|[-+*/]/g);
+  if(!raw)return '';var t=[],i;
+  for(i=0;i<raw.length;i++){
+    if(raw[i]==='-'&&(i===0||'+-*/'.indexOf(raw[i-1])>-1)&&i+1<raw.length){t.push(String(-raw[i+1]));i++}else t.push(raw[i]);
+  }
+  for(i=1;i<t.length-1;){
+    if(t[i]==='*'||t[i]==='/'){var op=t[i],a=+t[i-1],b=+t[i+1];t.splice(i-1,3,String(op==='*'?a*b:a/b))}else i+=2;
+  }
+  var r=+t[0];for(i=1;i<t.length;i+=2){r=t[i]==='+'?r+(+t[i+1]):r-(+t[i+1])}
+  return isFinite(r)?String(+r.toFixed(8)):'Error';
+}
+function press(k){
+  if(k==='C'){cur='';exp.textContent=''}
+  else if(k==='⌫'){cur=cur.slice(0,-1)}
+  else if(k==='%'){var v=parseFloat(cur);if(!isNaN(v))cur=String(v/100)}
+  else if(k==='±'){cur=cur.charAt(0)==='-'?cur.slice(1):'-'+cur}
+  else if(k==='='){exp.textContent=cur;cur=calc(cur);out.textContent=cur||'0';if(cur==='Error')cur='';return}
+  else cur+=k;
+  out.textContent=cur||'0';
+}`);
+
+const T_TODO=page('Tasks',
+`*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f4f6fb;color:#12172b;padding:20px;max-width:520px;margin:auto}
+h1{font-size:30px;margin:14px 0}form{display:flex;gap:8px}input{flex:1;padding:14px;border:1px solid #d5daea;border-radius:14px;font-size:16px}
+form button{padding:0 20px;border:0;border-radius:14px;background:#2f4bff;color:#fff;font-weight:700}
+ul{list-style:none;padding:0;margin:18px 0;display:flex;flex-direction:column;gap:8px}
+li{display:flex;align-items:center;justify-content:space-between;background:#fff;padding:14px;border-radius:14px;border:1px solid #e3e7f3}
+li span{flex:1;cursor:pointer}li.d span{text-decoration:line-through;color:#8a93b5}
+li button{border:0;background:none;font-size:22px;color:#c0334b}p{color:#5a6482}`,
+'<h1>Tasks</h1><form id="f"><input id="i" placeholder="Add a task" autocomplete="off"><button>Add</button></form><ul id="l"></ul><p id="c"></p>',
+`var items=[];try{items=JSON.parse(localStorage.getItem('t')||'[]')}catch(e){}
+var l=document.getElementById('l'),c=document.getElementById('c');
+function save(){try{localStorage.setItem('t',JSON.stringify(items))}catch(e){}}
+function draw(){
+  l.innerHTML='';
+  items.forEach(function(it,i){
+    var li=document.createElement('li');li.className=it.d?'d':'';
+    var s=document.createElement('span');s.textContent=it.t;s.onclick=function(){it.d=!it.d;save();draw()};
+    var x=document.createElement('button');x.textContent='×';x.onclick=function(){items.splice(i,1);save();draw()};
+    li.appendChild(s);li.appendChild(x);l.appendChild(li);
+  });
+  c.textContent=items.filter(function(i){return !i.d}).length+' left';
+}
+document.getElementById('f').onsubmit=function(e){e.preventDefault();var v=document.getElementById('i').value.trim();
+  if(v){items.push({t:v,d:0});document.getElementById('i').value='';save();draw()}};
+draw();`);
+
+const T_STOP=page('Stopwatch',
+`*{box-sizing:border-box;margin:0}body{min-height:100vh;display:grid;place-content:center;gap:28px;text-align:center;background:#0b1020;color:#fff;font-family:system-ui,sans-serif}
+#t{font-size:64px;font-weight:300;font-variant-numeric:tabular-nums}.r{display:flex;gap:14px;justify-content:center}
+button{width:96px;height:96px;border-radius:50%;border:0;font-size:16px;font-weight:700;color:#fff;background:#1d2547}
+#go{background:#2f4bff}#laps{list-style:none;padding:0;max-height:180px;overflow:auto;color:#9aa5cc;font-variant-numeric:tabular-nums}#laps li{padding:6px 0;border-bottom:1px solid #1d2547}`,
+'<div id="t">00:00.00</div><div class="r"><button id="lap">Lap</button><button id="go">Start</button></div><ul id="laps"></ul>',
+`var start=0,acc=0,run=false,id=0,t=document.getElementById('t'),go=document.getElementById('go'),laps=document.getElementById('laps');
+function fmt(ms){var m=Math.floor(ms/60000),s=Math.floor(ms/1000)%60,c=Math.floor(ms/10)%100;return (m<10?'0':'')+m+':'+(s<10?'0':'')+s+'.'+(c<10?'0':'')+c}
+function tick(){t.textContent=fmt(acc+(run?Date.now()-start:0))}
+go.onclick=function(){if(run){acc+=Date.now()-start;run=false;clearInterval(id);go.textContent='Start'}else{start=Date.now();run=true;id=setInterval(tick,30);go.textContent='Stop'}};
+document.getElementById('lap').onclick=function(){if(!run&&!acc){return}var li=document.createElement('li');li.textContent='Lap '+(laps.children.length+1)+'  '+t.textContent;laps.insertBefore(li,laps.firstChild)};`);
+
+const T_SNAKE=page('Snake',
+`*{box-sizing:border-box;margin:0}body{min-height:100vh;display:grid;place-content:center;gap:14px;justify-items:center;background:#090d1c;color:#fff;font-family:system-ui,sans-serif;touch-action:none}
+canvas{width:min(92vw,330px);height:min(92vw,330px);border-radius:16px;border:2px solid #1d2547}#s{font-variant-numeric:tabular-nums;color:#9aa5cc}
+.pad{display:grid;grid-template-columns:repeat(3,64px);gap:8px}.pad button{height:56px;border:0;border-radius:14px;background:#1d2547;color:#fff;font-size:20px}.pad .u{grid-column:2}.pad .l{grid-column:1;grid-row:2}.pad .d{grid-column:2;grid-row:2}.pad .r{grid-column:3;grid-row:2}`,
+'<div id="s"></div><canvas id="c" width="300" height="300"></canvas><div class="pad"><button class="u" data-d="0,-1">▲</button><button class="l" data-d="-1,0">◀</button><button class="d" data-d="0,1">▼</button><button class="r" data-d="1,0">▶</button></div>',
+`var cv=document.getElementById('c'),x=cv.getContext('2d'),N=15,S=20,sn,dir,food,score=0,best=0;
+function rnd(){return {x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)}}
+function reset(){sn=[{x:7,y:7}];dir={x:1,y:0};food=rnd();score=0}
+function draw(){
+  x.fillStyle='#0d1226';x.fillRect(0,0,300,300);
+  x.fillStyle='#ff5a36';x.fillRect(food.x*S+3,food.y*S+3,S-6,S-6);
+  x.fillStyle='#6f86ff';sn.forEach(function(p){x.fillRect(p.x*S+1,p.y*S+1,S-2,S-2)});
+  document.getElementById('s').textContent='Score '+score+'   Best '+best;
+}
+function step(){
+  var h={x:sn[0].x+dir.x,y:sn[0].y+dir.y};
+  if(h.x<0||h.y<0||h.x>=N||h.y>=N||sn.some(function(p){return p.x===h.x&&p.y===h.y})){best=Math.max(best,score);reset();draw();return}
+  sn.unshift(h);if(h.x===food.x&&h.y===food.y){score++;food=rnd()}else sn.pop();draw();
+}
+function turn(a,b){if(dir.x!==-a||dir.y!==-b)dir={x:a,y:b}}
+document.querySelectorAll('[data-d]').forEach(function(b){b.onclick=function(){var d=b.dataset.d.split(',');turn(+d[0],+d[1])}});
+addEventListener('keydown',function(e){var m={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(m)turn(m[0],m[1])});
+var tx=0,ty=0;addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY});
+addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.max(Math.abs(dx),Math.abs(dy))<24)return;if(Math.abs(dx)>Math.abs(dy))turn(dx>0?1:-1,0);else turn(0,dy>0?1:-1)});
+reset();draw();setInterval(step,130);`);
+
+const T_MUSIC=page('Music Player',
+`*{box-sizing:border-box;margin:0}body{min-height:100vh;background:linear-gradient(180deg,#1a2160,#0a0e22 60%);color:#fff;font-family:system-ui,sans-serif;padding:24px 18px;max-width:480px;margin:auto}
+.art{width:min(70vw,260px);aspect-ratio:1;margin:18px auto;border-radius:28px;background:conic-gradient(from 200deg,#2f4bff,#ff5a36,#2f4bff);display:grid;place-items:center;box-shadow:0 30px 60px rgba(47,75,255,.35)}
+.art i{width:44%;aspect-ratio:1;border-radius:50%;background:#0a0e22;display:block;box-shadow:inset 0 0 0 10px #151b45}
+.spin{animation:sp 8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+h2{text-align:center;font-size:22px}p.a{text-align:center;color:#9aa5cc;margin:4px 0 18px}
+.bar{height:6px;border-radius:4px;background:#232b5f;overflow:hidden}.bar b{display:block;height:100%;width:0;background:#fff}
+.ctl{display:flex;justify-content:center;align-items:center;gap:22px;margin:22px 0}.ctl button{border:0;background:none;color:#fff;font-size:26px}#pp{width:68px;height:68px;border-radius:50%;background:#fff;color:#10163a;font-size:24px}
+ul{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}li{padding:12px 14px;border-radius:14px;background:#141a45;display:flex;justify-content:space-between;cursor:pointer}li.on{background:#2f4bff}li small{color:#9aa5cc}`,
+'<div class="art" id="art"><i></i></div><h2 id="ti"></h2><p class="a" id="ar"></p><div class="bar"><b id="pg"></b></div><div class="ctl"><button id="pv">⏮</button><button id="pp">▶</button><button id="nx">⏭</button></div><ul id="ls"></ul>',
+`/* Add your own audio files to the project and set a.src for real playback. */
+var tr=[['Night Drive','Neon Harbor','3:42'],['Paper Planes','Lowtide','2:58'],['Glass City','Aurora Lane','4:10'],['Slow Burn','Mira Voss','3:21']];
+var i=0,play=false,p=0,id=0,a=document.getElementById('art');
+var ls=document.getElementById('ls'),pg=document.getElementById('pg'),pp=document.getElementById('pp');
+function show(){document.getElementById('ti').textContent=tr[i][0];document.getElementById('ar').textContent=tr[i][1];
+  ls.innerHTML='';tr.forEach(function(t,k){var li=document.createElement('li');li.className=k===i?'on':'';li.innerHTML='<span>'+t[0]+' <small>'+t[1]+'</small></span><small>'+t[2]+'</small>';li.onclick=function(){i=k;p=0;show()};ls.appendChild(li)})}
+function tick(){if(!play)return;p+=0.4;if(p>=100){i=(i+1)%tr.length;p=0;show()}pg.style.width=p+'%'}
+pp.onclick=function(){play=!play;pp.textContent=play?'❚❚':'▶';a.className='art'+(play?' spin':'')};
+document.getElementById('nx').onclick=function(){i=(i+1)%tr.length;p=0;show()};
+document.getElementById('pv').onclick=function(){i=(i+tr.length-1)%tr.length;p=0;show()};
+setInterval(tick,100);show();`);
+
+const T_FOLIO=page('Portfolio',
+`*{box-sizing:border-box;margin:0}body{font-family:system-ui,sans-serif;color:#10152b;background:#fff;line-height:1.6}
+header{padding:60px 22px 40px;background:#0b1020;color:#fff}header small{color:#9fb0ff;letter-spacing:.16em;text-transform:uppercase;font-size:12px}
+h1{font-size:38px;line-height:1.1;margin:10px 0 12px;max-width:14ch}header p{color:#b4c0e8;max-width:36ch}
+section{padding:34px 22px}h2{font-size:20px;margin-bottom:14px}.g{display:grid;gap:12px}
+.c{padding:18px;border-radius:18px;background:#f2f4fb}.c b{display:block;margin-bottom:4px}.c span{color:#5a6482;font-size:14px}
+a.b{display:inline-block;margin-top:16px;padding:13px 22px;border-radius:14px;background:#2f4bff;color:#fff;text-decoration:none;font-weight:700}
+footer{padding:26px 22px;color:#8a93b5;font-size:13px}`,
+'<header><small>Portfolio</small><h1>Your Name. Designer and developer.</h1><p>Replace this text with a short line about what you build.</p><a class="b" href="#work" style="background:#fff;color:#1a2bd0">See my work</a></header><section id="work"><h2>Selected work</h2><div class="g"><div class="c"><b>Project one</b><span>Mobile app for local deliveries.</span></div><div class="c"><b>Project two</b><span>Brand and website for a coffee roaster.</span></div><div class="c"><b>Project three</b><span>Dashboard for a logistics team.</span></div></div></section><section><h2>Say hello</h2><p>hello@yourdomain.com</p><a class="b" href="#">Get in touch</a></section><footer>© Your Name</footer>',
+`document.querySelectorAll('a[href^="#"]').forEach(function(a){a.addEventListener('click',function(e){var t=document.querySelector(a.getAttribute('href'));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth'})}})});`);
+
+const T_QUIZ=page('Android Quiz',
+`*{box-sizing:border-box;margin:0}body{min-height:100vh;background:#f2f4fb;font-family:system-ui,sans-serif;color:#10152b;padding:22px;max-width:520px;margin:auto;display:flex;flex-direction:column;justify-content:center;gap:16px}
+small{color:#5a6482;font-weight:700}h2{font-size:22px;line-height:1.25}.o{display:flex;flex-direction:column;gap:10px}
+.o button{padding:16px;border-radius:16px;border:2px solid #dfe4f2;background:#fff;font-size:16px;text-align:left}.o button.ok{border-color:#0e9f55;background:#e5f6ec}.o button.no{border-color:#d4304a;background:#fdeaee}
+#nx{padding:15px;border:0;border-radius:16px;background:#2f4bff;color:#fff;font-weight:700;font-size:16px;display:none}`,
+'<small id="n"></small><h2 id="q"></h2><div class="o" id="o"></div><button id="nx">Next</button>',
+`var Q=[['Which language does Google prefer for new Android apps?',['Kotlin','Perl','Ruby'],0],['What does APK stand for?',['Android Package','Apple Package Kit','App Program Key'],0],['Which file declares app permissions?',['AndroidManifest.xml','build.gradle','strings.xml'],0],['Which API level is Android 5.0?',['21','19','26'],0],['Which tool signs an APK?',['apksigner','git','npm'],0]];
+var k=0,sc=0,q=document.getElementById('q'),o=document.getElementById('o'),nx=document.getElementById('nx'),n=document.getElementById('n');
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function show(){
+  if(k>=Q.length){n.textContent='Finished';q.textContent='You scored '+sc+' of '+Q.length;o.innerHTML='';nx.style.display='block';nx.textContent='Play again';nx.onclick=function(){k=0;sc=0;show()};return}
+  n.textContent='Question '+(k+1)+' of '+Q.length;q.textContent=Q[k][0];nx.style.display='none';o.innerHTML='';
+  var right=Q[k][1][Q[k][2]];
+  shuffle(Q[k][1].slice()).forEach(function(t){var b=document.createElement('button');b.textContent=t;
+    b.onclick=function(){if(o.dataset.done)return;o.dataset.done=1;if(t===right){sc++;b.className='ok'}else{b.className='no';[].forEach.call(o.children,function(c){if(c.textContent===right)c.className='ok'})}nx.style.display='block';nx.textContent='Next';nx.onclick=function(){k++;delete o.dataset.done;show()}};
+    o.appendChild(b)});
+}
+show();`);
+
+const T_NOTES=page('Notes',
+`*{box-sizing:border-box;margin:0}body{font-family:system-ui,sans-serif;background:#fffdf7;color:#1b1a14;padding:18px;max-width:560px;margin:auto}
+h1{font-size:28px;margin:10px 0 14px}textarea{width:100%;min-height:110px;padding:14px;border:1px solid #e6dfc8;border-radius:16px;font:inherit;background:#fff}
+button.s{margin:10px 0 18px;padding:13px 20px;border:0;border-radius:14px;background:#1b1a14;color:#fff;font-weight:700}
+.n{background:#fff;border:1px solid #eee7d2;padding:14px;border-radius:16px;margin-bottom:10px;white-space:pre-wrap}.n small{display:flex;justify-content:space-between;color:#8d8668;margin-top:8px}.n button{border:0;background:none;color:#c0334b}`,
+'<h1>Notes</h1><textarea id="t" placeholder="Write something…"></textarea><button class="s" id="s">Save note</button><div id="l"></div>',
+`var notes=[];try{notes=JSON.parse(localStorage.getItem('n')||'[]')}catch(e){}
+function save(){try{localStorage.setItem('n',JSON.stringify(notes))}catch(e){}}
+function draw(){var l=document.getElementById('l');l.innerHTML='';notes.forEach(function(n,i){var d=document.createElement('div');d.className='n';var t=document.createElement('div');t.textContent=n.t;var s=document.createElement('small');s.textContent=new Date(n.d).toLocaleString();var b=document.createElement('button');b.textContent='Delete';b.onclick=function(){notes.splice(i,1);save();draw()};s.appendChild(b);d.appendChild(t);d.appendChild(s);l.appendChild(d)})}
+document.getElementById('s').onclick=function(){var v=document.getElementById('t').value.trim();if(!v)return;notes.unshift({t:v,d:Date.now()});document.getElementById('t').value='';save();draw()};
+draw();`);
+
+const pkgPath=p=>p.replace(/\./g,'/');
+function nativeFiles(lang,pkg){
+  const f={};
+  f['AndroidManifest.xml']='<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="'+pkg+'">\n    <uses-permission android:name="android.permission.INTERNET" />\n    <application\n        android:allowBackup="true"\n        android:label="@string/app_name"\n        android:theme="@style/Theme.AppCompat.Light.NoActionBar">\n        <activity android:name=".MainActivity" android:exported="true">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n';
+  if(lang==='java'){
+    f['src/main/java/'+pkgPath(pkg)+'/MainActivity.java']='package '+pkg+';\n\nimport android.os.Bundle;\nimport android.widget.TextView;\nimport androidx.appcompat.app.AppCompatActivity;\n\npublic class MainActivity extends AppCompatActivity {\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        setContentView(R.layout.activity_main);\n        TextView title = findViewById(R.id.title);\n        title.setText("Hello from AR APK BUILD");\n    }\n}\n';
+  }else{
+    f['src/main/java/'+pkgPath(pkg)+'/MainActivity.kt']='package '+pkg+'\n\nimport android.os.Bundle\nimport android.widget.TextView\nimport androidx.appcompat.app.AppCompatActivity\n\nclass MainActivity : AppCompatActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        setContentView(R.layout.activity_main)\n        findViewById<TextView>(R.id.title).text = "Hello from AR APK BUILD"\n    }\n}\n';
+  }
+  f['src/main/res/layout/activity_main.xml']='<?xml version="1.0" encoding="utf-8"?>\n<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"\n    android:layout_width="match_parent"\n    android:layout_height="match_parent"\n    android:gravity="center"\n    android:orientation="vertical">\n\n    <TextView\n        android:id="@+id/title"\n        android:layout_width="wrap_content"\n        android:layout_height="wrap_content"\n        android:textSize="22sp" />\n</LinearLayout>\n';
+  f['src/main/res/values/strings.xml']='<resources>\n    <string name="app_name">My App</string>\n</resources>\n';
+  f['build.gradle.kts']='plugins {\n    id("com.android.application")\n'+(lang==='java'?'':'    id("org.jetbrains.kotlin.android")\n')+'}\n\nandroid {\n    namespace = "'+pkg+'"\n    compileSdk = 34\n\n    defaultConfig {\n        applicationId = "'+pkg+'"\n        minSdk = 21\n        targetSdk = 34\n        versionCode = 1\n        versionName = "1.0"\n    }\n\n    buildTypes {\n        release {\n            isMinifyEnabled = true\n        }\n    }\n}\n\ndependencies {\n    implementation("androidx.appcompat:appcompat:1.7.0")\n}\n';
+  return f;
+}
+
+const STARTERS={
+  blank:()=>({'index.html':page('My App','body{font-family:system-ui,sans-serif;padding:24px}','<h1>Hello</h1>','')}),
+  html:(n)=>({
+    'index.html':'<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<title>'+n+'</title>\n<link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <main>\n    <h1>'+n+'</h1>\n    <p>Edit these files, press Run, then build your APK.</p>\n    <button id="btn">Tap me</button>\n    <p id="out"></p>\n  </main>\n  <script src="script.js"><\/script>\n</body>\n</html>\n',
+    'style.css':'* { box-sizing: border-box; }\nbody {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  background: #0b1020;\n  color: #fff;\n  text-align: center;\n}\nbutton {\n  padding: 14px 26px;\n  border: 0;\n  border-radius: 14px;\n  background: #2f4bff;\n  color: #fff;\n  font-size: 16px;\n  font-weight: 700;\n}\n',
+    'script.js':'var count = 0;\ndocument.getElementById("btn").addEventListener("click", function () {\n  count++;\n  document.getElementById("out").textContent = "Taps: " + count;\n  console.log("tapped", count);\n});\n'}),
+  webview:(n,url)=>({'app.json':JSON.stringify({name:n,url:url||'https://example.com',note:'The WebView wrapper loads this URL inside your Android app.'},null,2)+'\n','README.md':'# '+n+'\n\nWebView project. Set the website address in app.json, then open Build APK.\n'}),
+  kotlin:(n,pkg)=>nativeFiles('kotlin',pkg),
+  java:(n,pkg)=>nativeFiles('java',pkg)
+};
+
+const TPL=[
+  {id:'calc',name:'Calculator',cat:'Tools',desc:'Four-function calculator with large touch keys.',c1:'#3B55FF',c2:'#16208F',icon:'grid',files:{'index.html':T_CALC}},
+  {id:'todo',name:'Task List',cat:'Tools',desc:'Add, finish and delete tasks. Saves on the device.',c1:'#2FC17D',c2:'#0B6B47',icon:'check',files:{'index.html':T_TODO}},
+  {id:'stop',name:'Stopwatch',cat:'Tools',desc:'Start, stop and lap timer with centisecond display.',c1:'#8B6BF2',c2:'#3E2BA8',icon:'clock',files:{'index.html':T_STOP}},
+  {id:'notes',name:'Notes',cat:'Tools',desc:'Quick notes with timestamps, stored locally.',c1:'#F2B84B',c2:'#B8741A',icon:'edit',files:{'index.html':T_NOTES}},
+  {id:'snake',name:'Snake',cat:'Games',desc:'Classic snake with swipe and on-screen controls.',c1:'#FF7A59',c2:'#C23412',icon:'play',files:{'index.html':T_SNAKE}},
+  {id:'quiz',name:'Android Quiz',cat:'Games',desc:'Five-question multiple choice quiz with scoring.',c1:'#14B8C4',c2:'#0A6A8F',icon:'star',files:{'index.html':T_QUIZ}},
+  {id:'music',name:'Music Player UI',cat:'Media',desc:'Player screen with playlist and spinning disc.',c1:'#4F6BFF',c2:'#1B1F6B',icon:'play',files:{'index.html':T_MUSIC}},
+  {id:'folio',name:'Portfolio',cat:'Business',desc:'One-page personal site with work and contact.',c1:'#1E2A5E',c2:'#0A1022',icon:'user',files:{'index.html':T_FOLIO}},
+  {id:'kt',name:'Kotlin Starter',cat:'Native',desc:'Minimal Kotlin app with manifest, layout and Gradle.',c1:'#2FC17D',c2:'#0E7C53',icon:'code',native:'kotlin'},
+  {id:'jv',name:'Java Starter',cat:'Native',desc:'Minimal Java activity with manifest and layout.',c1:'#FF8A5C',c2:'#D93E1E',icon:'code',native:'java'},
+  {id:'wv',name:'WebView Wrapper',cat:'Native',desc:'Turn any website address into an installable app.',c1:'#5B74FF',c2:'#2437C7',icon:'globe',web:true}
+];
+
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const now=()=>Date.now();
+const DAY=864e5;
+const ago=t=>{const s=(now()-t)/1000;if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'};
+const fmtDate=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const fmtTime=t=>new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const taka=n=>'৳'+Number(n||0).toLocaleString('en-US');
+const initials=n=>(String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')||'?').toUpperCase();
+const slug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,24)||'app';
+const validPkg=p=>/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(p);
+const validEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+const IC={home:'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',folder:'M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',code:'M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16',bolt:'M13 2L4 14h7l-1 8 9-12h-7z',lock:'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3',grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',flask:'M9 3h6M10 3v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-6-10V3',wallet:'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2zM16 14h2',receipt:'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',star:'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',info:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 11v6M12 7.5v.01',logout:'M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 8l4 4-4 4M20 12H9',plus:'M12 5v14M5 12h14',upload:'M12 16V4M7 9l5-5 5 5M4 20h16',download:'M12 4v12M7 11l5 5 5-5M4 20h16',play:'M7 4l13 8-13 8z',save:'M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6',trash:'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',search:'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5',x:'M6 6l12 12M18 6L6 18',check:'M5 12l5 5 9-10',menu:'M4 6h16M4 12h16M4 18h16',sun:'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',moon:'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',file:'M6 3h8l5 5v13H6zM14 3v5h5',chev:'M9 6l6 6-6 6',edit:'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',users:'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 20a7 7 0 0 1 14 0M17 4.5a3.5 3.5 0 0 1 0 6.5M22 20a7 7 0 0 0-4-6.3',chart:'M4 20V10M10 20V4M16 20v-7M22 20H2',sliders:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',globe:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM2 12h20M12 2c3 3 4 6.5 4 10s-1 7-4 10c-3-3-4-6.5-4-10s1-7 4-10z',phone:'M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM11 18h2',terminal:'M4 5h16v14H4zM7 10l3 2-3 2M12 15h5',clock:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',pkg:'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',layers:'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5',shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',copy:'M8 8h12v12H8zM4 16V4h12',refresh:'M20 11a8 8 0 1 0-2 6M20 4v7h-7',cpu:'M7 7h10v10H7zM9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4',zap:'M13 2L4 14h7l-1 8 9-12h-7z',bell:'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',ban:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM5 5l14 14',card:'M3 6h18v12H3zM3 10h18M7 15h4'};
+const ic=(n,s=18)=>'<svg class="ic" width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(IC[n]||'')+'"/></svg>';
+const logo=(s=36)=>'<svg width="'+s+'" height="'+s+'" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5470FF"/><stop offset="1" stop-color="#1F2FD1"/></linearGradient></defs><rect width="40" height="40" rx="11" fill="url(#lg)"/><path d="M11 28 20 10l9 18" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.8 22.5h10.4" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="31" cy="11" r="3.2" fill="#FF5A36"/></svg>';
+const bot=()=>'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 14l-4-7M42 14l4-7" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M14 30a18 18 0 0 1 36 0z" fill="#fff"/><circle cx="25" cy="23" r="2.4" fill="var(--cov)"/><circle cx="39" cy="23" r="2.4" fill="var(--cov)"/><rect x="14" y="33" width="36" height="22" rx="6" fill="#fff"/><rect x="7" y="34" width="5" height="16" rx="2.5" fill="#fff"/><rect x="52" y="34" width="5" height="16" rx="2.5" fill="#fff"/></svg>';
+
+/* ---------- storage & seed ---------- */
+const KEY='arapk.db.v1',SKEY='arapk.sess.v1',CKEY='arapk.cfg.v1',TKEY='arapk.theme.v1';
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let db=null;
+const S={route:'home',last:'',uid:null,cur:null,tab:null,open:[],pane:'code',q:'',cat:'All',ptype:'all',authTab:'login',adminTab:'overview',cfg:null,build:null,next:null,filesOpen:false,dev:false,cons:false,live:true,saved:true,fails:0,lockUntil:0,zip:null,uq:'',focusQ:false};
+function save(){if(!store.set(KEY,db))toast('Browser storage is full. Remove large files from a project.','err')}
+function addLog(t){db.log.unshift({at:now(),t});db.log.length=Math.min(db.log.length,200)}
+async function hashPw(p){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('arapk::'+p));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){let h=5381;for(const c of 'arapk::'+p)h=(h*33^c.charCodeAt(0))>>>0;return 'x'+h.toString(16)}}
+
+async function seed(){
+  const t=now(),demo=await hashPw('Demo@1234');
+  const admin={id:'admin',name:'Site Admin',email:'admin@arapkbuild.com',pw:await hashPw('Admin@123'),role:'admin',plan:'studio',exp:0,wallet:0,created:t-30*DAY,status:'active'};
+  const mk=(n,e,plan,w,d,st)=>({id:uid(),name:n,email:e,pw:demo,role:'user',plan,exp:plan==='free'?0:t+20*DAY,wallet:w,created:t-d*DAY,status:st||'active'});
+  const users=[admin,mk('Rafi Ahmed','rafi@example.com','pro',120,12),mk('Tania Islam','tania@example.com','free',0,9),mk('Imran Hossain','imran@example.com','studio',40,7),mk('Nusrat Jahan','nusrat@example.com','free',50,4),mk('Sabbir Khan','sabbir@example.com','free',0,2),mk('Test Spammer','spam@example.com','free',0,1,'banned')];
+  const names=[['Music','com.music.app'],['Quiz Master','com.quiz.master'],['Tasker','com.tasker.app'],['Pixel Shop','com.pixel.shop'],['News Lite','com.news.lite'],['Fit Track','com.fit.track']];
+  const builds=[];
+  for(let i=0;i<30;i++){const n=names[i%names.length],u=users[1+(i%5)];builds.push({id:uid(),uid:u.id,name:n[0],pkg:n[1],ver:'1.'+(i%4),size:+(8.8+(i%7)*.9).toFixed(2),status:i%9===4?'failed':'success',at:t-Math.floor(i/5)*DAY-(i%5)*3.1e6,mode:'demo'})}
+  const pay=(u,type,amt,m,st,d,extra)=>Object.assign({id:uid(),uid:u.id,type,amount:amt,method:m,status:st,at:t-d*DAY,trx:'8N'+Math.random().toString(36).slice(2,8).toUpperCase()},extra||{});
+  const payments=[pay(users[2],'topup',200,'bKash','pending',0),pay(users[4],'topup',100,'Nagad','pending',1),pay(users[5],'topup',500,'bKash','pending',1),pay(users[1],'topup',300,'bKash','approved',12),pay(users[1],'plan',199,'wallet','approved',11,{plan:'pro'}),pay(users[3],'plan',499,'wallet','approved',6,{plan:'studio'})];
+  return {v:1,users,projects:[],builds,payments,templates:[],hidden:[],
+    settings:{site:'AR APK BUILD',announce:'',announceOn:false,maintenance:false,signup:true,freeBuilds:3,speed:1,buildApi:'',payInfo:'Send money to 01XXXXXXXXX (bKash or Nagad, Personal), then submit the transaction ID.',plans:{free:{price:0},pro:{price:199},studio:{price:499}}},
+    log:[{at:t-3600e3,t:'Sample data loaded'},{at:t-DAY,t:'Admin account created'}]};
+}
+
+/* ---------- toast & modal ---------- */
+function toast(msg,type=''){const d=document.createElement('div');d.className='toast '+type;d.setAttribute('role','status');d.innerHTML=(type==='err'?ic('x',16):type==='ok'?ic('check',16):'')+'<span>'+esc(msg)+'</span>';$('#toasts').appendChild(d);setTimeout(()=>{d.style.transition='opacity .3s';d.style.opacity='0';setTimeout(()=>d.remove(),320)},3200)}
+function modal(html,cls=''){closeModal();const d=document.createElement('div');d.className='modal-bg';d.innerHTML='<div class="modal '+cls+'" role="dialog" aria-modal="true">'+html+'</div>';d.addEventListener('mousedown',e=>{if(e.target===d)closeModal()});$('#layer').appendChild(d);const f=$('input:not([type=radio]):not([type=checkbox]),select,textarea',d);if(f)setTimeout(()=>f.focus({preventScroll:true}),60);return d}
+const closeModal=()=>{$('#layer').innerHTML=''};
+const mhead=t=>'<div class="mh"><h2>'+t+'</h2><button class="iconbtn" data-a="close" aria-label="Close">'+ic('x',18)+'</button></div>';
+function confirmBox(title,msg,yes,label='Delete'){S.cb=yes;modal(mhead(esc(title))+'<p style="color:var(--muted);margin-bottom:18px">'+esc(msg)+'</p><div class="row2"><button class="btn" data-a="close">Cancel</button><button class="btn btn-primary" style="background:var(--bad)" data-a="confirmyes">'+esc(label)+'</button></div>')}
+
+/* ---------- session ---------- */
+const me=()=>{const u=db.users.find(x=>x.id===S.uid);if(u&&u.plan!=='free'&&u.exp&&u.exp<now()){u.plan='free';u.exp=0;save()}return u||null};
+const isAdmin=()=>{const u=me();return !!u&&u.role==='admin'};
+const isPro=()=>{const u=me();return !!u&&u.plan!=='free'};
+const owner=()=>S.uid||'guest';
+const myProjects=()=>db.projects.filter(p=>p.owner===owner());
+const curProject=()=>db.projects.find(p=>p.id===S.cur);
+const userName=id=>{const u=db.users.find(x=>x.id===id);return u?u.name:'Guest'};
+function setSession(u){S.uid=u?u.id:null;store.set(SKEY,u?u.id:null)}
+function afterAuth(u){
+  setSession(u);
+  db.projects.forEach(p=>{if(p.owner==='guest')p.owner=u.id});
+  save();
+  const n=S.next;S.next=null;
+  toast('Welcome, '+u.name.split(' ')[0],'ok');
+  go(n||'home');
+}
+function gate(next,msg){S.next=next;S.authTab='register';toast(msg||'Create a free account to continue');go('login')}
+
+/* ---------- code highlighting ---------- */
+const KW={js:'const let var function return if else for while do switch case break continue new this class extends import export from default async await try catch finally throw typeof instanceof in of null true false undefined',kt:'fun val var class object interface override private public protected internal if else when for while do return null true false is in as super this import package companion data sealed lateinit by init constructor abstract open suspend',java:'class public private protected static final void int long double float boolean char byte short new return if else for while do switch case break continue try catch finally throw throws extends implements import package null true false this super interface abstract synchronized instanceof'};
+const KWS={};for(const k in KW)KWS[k]=new Set(KW[k].split(' '));
+function langOf(n){const e=(n.split('.').pop()||'').toLowerCase();return {html:'html',htm:'html',xml:'xml',css:'css',js:'js',mjs:'js',json:'js',kt:'kt',kts:'kt',java:'java'}[e]||'txt'}
+const isBin=c=>typeof c==='string'&&c.startsWith('data:');
+function hl(src,lang){
+  const e=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const w=(c,s)=>'<span class="t-'+c+'">'+e(s)+'</span>';
+  if(lang==='txt')return e(src);
+  if(lang==='html'||lang==='xml'){
+    const re=/(<!--[\s\S]*?-->|<![A-Za-z][^>]*>|<\?[\s\S]*?\?>)|(<\/?[A-Za-z][\w:.-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)(\/?>)/g;
+    const attrs=s=>s.replace(/("[^"]*"|'[^']*')|([^\s="']+)|(\s+|=)/g,(x,v,n)=>v?w('str',v):n?w('attr',n):e(x));
+    let out='',last=0,m;
+    while((m=re.exec(src))){out+=e(src.slice(last,m.index));out+=m[1]?w('com',m[1]):w('tag',m[2])+attrs(m[3])+w('tag',m[4]);last=re.lastIndex}
+    return out+e(src.slice(last));
+  }
+  let re,set=KWS[lang]||KWS.js;
+  if(lang==='css')re=/(\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|(#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|s|ms|deg)?\b)|(@[\w-]+)|([\w-]+)(?=\s*:)/g;
+  else re=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\b(\d+(?:\.\d+)?)\b|\b([A-Za-z_$][\w$]*)\b/g;
+  let out='',last=0,m;
+  while((m=re.exec(src))){
+    out+=e(src.slice(last,m.index));last=re.lastIndex;
+    if(m[1])out+=w('com',m[1]);else if(m[2])out+=w('str',m[2]);else if(m[3])out+=w('num',m[3]);
+    else if(lang==='css'){out+=m[4]?w('kw',m[4]):w('attr',m[5])}
+    else{const id=m[4];const nx=src.charAt(last);out+=set.has(id)?w('kw',id):nx==='('?w('fn',id):(/^[A-Z]/.test(id)&&lang!=='js'?w('type',id):e(id))}
+  }
+  return out+e(src.slice(last));
+}
+
+/* ---------- live preview document ---------- */
+function previewDoc(files){
+  let html=files['index.html'];
+  if(html==null)return '<p style="font-family:system-ui;padding:20px;color:#444">No index.html in this project.</p>';
+  html=html.replace(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi,(m,h)=>files[h]!=null&&/stylesheet/i.test(m)&&!isBin(files[h])?'<style>'+files[h]+'</style>':m);
+  html=html.replace(/<script([^>]*?)src=["']([^"']+)["']([^>]*)><\/script>/gi,(m,a,s,b)=>files[s]!=null&&!isBin(files[s])?'<script'+a+b+'>'+files[s].replace(/<\/script/gi,'<\\/script')+'<\/script>':m);
+  html=html.replace(/(src|href)=["']([^"']+)["']/gi,(m,at,v)=>isBin(files[v])?at+'="'+files[v]+'"':m);
+  const hook='<script>(function(){function s(l,a){try{parent.postMessage({arapk:1,l:l,m:[].map.call(a,function(x){try{return typeof x==="object"?JSON.stringify(x):String(x)}catch(e){return String(x)}}).join(" ")},"*")}catch(e){}}["log","warn","error","info"].forEach(function(k){var o=console[k];console[k]=function(){s(k,arguments);o.apply(console,arguments)}});addEventListener("error",function(e){s("error",[e.message+" (line "+(e.lineno||0)+")"])})})()<\/script>';
+  return /<head[^>]*>/i.test(html)?html.replace(/<head[^>]*>/i,m=>m+hook):hook+html;
+}
+
+/* ---------- conveyor canvas (hero art) ---------- */
+function conveyor(cv,fx,fy){
+  if(!cv||!cv.getContext)return;
+  const c=cv.getContext('2d');if(!c)return;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W=0,H=0,chips=[],pills=[],t=0,pulse=0;
+  const names=['index.html','App.kt','style.css','game.js','Main.java','assets.zip','manifest.xml','logo.png','build.gradle'];
+  const cols=['#7C95FF','#FF8A66','#4FE3A4','#F5C857'];
+  function size(){const d=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*d;cv.height=H*d;c.setTransform(d,0,0,d,0,0)}
+  const ctr=()=>fx!=null?[W*fx,H*fy]:(W>700?[W*.78,H*.5]:[W*.8,H*.3]);
+  function spawn(){const [cx,cy]=ctr();const top=Math.random()<.45;chips.push({n:names[Math.floor(Math.random()*names.length)],c:cols[Math.floor(Math.random()*cols.length)],x0:top?Math.random()*W*.8:-60,y0:top?-20:H*(.3+Math.random()*.8),p:0,sp:.0035+Math.random()*.0035,w:Math.random()*6})}
+  function cube(cx,cy,s){
+    const b=Math.sin(t*.02)*3;cy+=b;
+    const g=c.createRadialGradient(cx,cy,s*.2,cx,cy,s*3.2);g.addColorStop(0,'rgba(84,112,255,'+(.35+pulse*.3)+')');g.addColorStop(1,'rgba(84,112,255,0)');c.fillStyle=g;c.fillRect(cx-s*3.4,cy-s*3.4,s*6.8,s*6.8);
+    c.save();c.translate(cx,cy);c.strokeStyle='rgba(159,176,255,.35)';c.setLineDash([4,6]);c.lineDashOffset=-t*.4;c.beginPath();c.ellipse(0,s*.9,s*1.9,s*.62,0,0,Math.PI*2);c.stroke();c.setLineDash([]);
+    const k=1+pulse*.06;c.scale(k,k);
+    const face=(pts,f)=>{c.beginPath();c.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)c.lineTo(pts[i],pts[i+1]);c.closePath();c.fillStyle=f;c.fill()};
+    face([0,-s,s*.95,-s*.5,0,0,-s*.95,-s*.5],'#8EA2FF');
+    face([-s*.95,-s*.5,0,0,0,s,-s*.95,s*.5],'#3C57F5');
+    face([s*.95,-s*.5,0,0,0,s,s*.95,s*.5],'#2237C9');
+    c.fillStyle='#fff';c.font='700 '+Math.round(s*.34)+'px JetBrains Mono,monospace';c.textAlign='center';c.fillText('APK',-s*.46,s*.28);
+    c.fillStyle='#FF5A36';c.beginPath();c.arc(s*.5,-s*.12,s*.1,0,Math.PI*2);c.fill();
+    c.restore();
+  }
+  function frame(){
+    if(!cv.isConnected)return;
+    t++;pulse*=.92;
+    c.clearRect(0,0,W,H);
+    c.strokeStyle='rgba(130,150,255,.1)';c.lineWidth=1;const off=(t*.3)%32;
+    for(let x=-off;x<W;x+=32){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke()}
+    for(let y=-off;y<H;y+=32){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()}
+    const [cx,cy]=ctr(),s=Math.max(30,Math.min(W,H)*.15);
+    if(!reduce&&t%38===0&&chips.length<9)spawn();
+    c.font='500 11px JetBrains Mono,monospace';c.textAlign='left';
+    chips=chips.filter(ch=>{
+      ch.p+=ch.sp;if(ch.p>=1){pulse=1;if(Math.random()<.4)pills.push({x:cx,y:cy-s,a:1});return false}
+      const e=ch.p*ch.p*(3-2*ch.p),x=ch.x0+(cx-ch.x0)*e,y=ch.y0+(cy-ch.y0)*e+Math.sin(t*.05+ch.w)*5,k=1-ch.p*.7,wd=(ch.n.length*6.6+22)*k;
+      c.globalAlpha=Math.min(1,(1-ch.p)*1.6)*.9;c.fillStyle='rgba(15,22,52,.92)';c.strokeStyle=ch.c;c.lineWidth=1;
+      c.beginPath();c.roundRect?c.roundRect(x-wd/2,y-10*k,wd,20*k,7*k):c.rect(x-wd/2,y-10*k,wd,20*k);c.fill();c.stroke();
+      c.fillStyle=ch.c;c.save();c.translate(x,y+4*k);c.scale(k,k);c.textAlign='center';c.fillText(ch.n,0,0);c.restore();c.globalAlpha=1;return true;
+    });
+    cube(cx,cy,s);
+    pills=pills.filter(p=>{p.y-=.7;p.x+=.25;p.a-=.008;if(p.a<=0)return false;c.globalAlpha=p.a;c.fillStyle='#14B86B';c.beginPath();c.roundRect?c.roundRect(p.x-34,p.y-10,68,20,10):c.rect(p.x-34,p.y-10,68,20);c.fill();c.fillStyle='#fff';c.textAlign='center';c.fillText('app.apk ✓',p.x,p.y+4);c.globalAlpha=1;return true});
+    if(!reduce)requestAnimationFrame(frame);
+  }
+  size();for(let i=0;i<5;i++){spawn();chips[i].p=i*.17}
+  const onR=()=>{if(!cv.isConnected){removeEventListener('resize',onR);return}size()};
+  addEventListener('resize',onR);
+  frame();
+}
+
+/* ---------- shell ---------- */
+function shell(inner){
+  const u=me(),r=S.route,site=esc(db.settings.site);
+  const nav=(rt,i,t)=>'<a class="nav '+(r===rt?'on':'')+'" href="#'+rt+'" data-close>'+ic(i,18)+'<span>'+t+'</span></a>';
+  const eff=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  return '<div class="app"><aside class="side" id="side">'
+  +'<a class="brand" href="#home" data-close>'+logo(38)+'<span><b>'+site+'</b><i>APK Builder</i></span></a>'
+  +(u?'<div class="ucard"><span class="av">'+esc(initials(u.name))+'</span><div><b>'+esc(u.name)+'</b><small>'+esc(u.email)+'</small></div></div>'
+     :'<div class="ucard guest"><div><b>Guest</b><small>Sign in to build</small></div><a class="btn btn-sm btn-primary" href="#login">Sign in</a></div>')
+  +'<nav>'+nav('home','home','Dashboard')+nav('projects','folder','My Projects')+nav('editor','code','Code Editor')+nav('build','bolt','Build APK')+nav('converter','lock','Secure Converter')
+  +'<hr>'+nav('store','grid','Templates')+nav('lab','flask','Lab')
+  +'<hr>'+nav('wallet','wallet','Wallet')+nav('payments','receipt','My Payments')+nav('plans','star','Subscription')
+  +'<hr>'+nav('profile','user','Profile')+nav('about','info','About')
+  +(isAdmin()?'<hr><a class="nav admin '+(r==='admin'?'on':'')+'" href="#admin" data-close>'+ic('shield',18)+'<span>Admin Panel</span></a>':'')
+  +'<hr>'+(u?'<a class="nav" href="#home" data-a="logout" style="color:var(--bad)">'+ic('logout',18)+'<span>Logout</span></a>':'<a class="nav" href="#login" data-close>'+ic('user',18)+'<span>Sign in or register</span></a>')
+  +'</nav></aside><div class="scrim" id="scrim" data-a="drawer"></div>'
+  +'<div class="col"><header class="top"><button class="iconbtn menu-btn" data-a="drawer" aria-label="Open menu">'+ic('menu',20)+'</button>'
+  +'<label class="search grow">'+ic('search',16)+'<input id="q" type="search" placeholder="Search projects…" value="'+esc(S.q)+'" data-in="q" aria-label="Search projects" autocomplete="off"></label>'
+  +'<select class="layout-select" id="layout-mode" aria-label="Layout mode" title="Choose Mobile or Desktop mode"><option value="auto">Auto mode</option><option value="mobile">Mobile mode</option><option value="desktop">Desktop mode</option></select>'
+  +'<button class="iconbtn" data-a="theme" aria-label="Toggle theme">'+ic(eff==='dark'?'sun':'moon',18)+'</button>'
+  +(u?'<a class="av" href="#profile" aria-label="Profile" style="width:40px;height:40px">'+esc(initials(u.name))+'</a>':'<a class="btn btn-primary" href="#login">Sign in</a>')
+  +'</header><main class="page" id="view">'+inner+'</main></div>'
+  +'<nav class="bnav" aria-label="Main">'
+  +'<a href="#home" class="'+(r==='home'?'on':'')+'">'+ic('home',21)+'Home</a>'
+  +'<a href="#projects" class="'+(r==='projects'?'on':'')+'">'+ic('folder',21)+'Projects</a>'
+  +'<a href="#build" class="mid '+(r==='build'?'on':'')+'"><span>'+ic('bolt',22)+'</span>Build</a>'
+  +'<a href="#store" class="'+(r==='store'?'on':'')+'">'+ic('grid',21)+'Store</a>'
+  +'<button data-a="drawer">'+ic('menu',21)+'More</button></nav></div>';
+}
+
+/* ---------- auth view ---------- */
+function authView(){
+  const reg=S.authTab==='register',fb=db.settings.freeBuilds;
+  const pw=(id,ph,ac)=>'<div class="pw"><input class="input" id="'+id+'" name="'+id+'" type="password" placeholder="'+ph+'" autocomplete="'+ac+'" required><button type="button" data-a="showpw" aria-label="Show password">'+ic('eye',18)+'</button></div>';
+  let form;
+  if(S.authTab==='forgot')form='<h1>Reset password</h1><p style="color:var(--muted)">Enter your account email and a new password. In production this step is a link sent by email.</p>'
+    +'<form data-f="forgot" class="bform" novalidate><div class="field"><label for="fg-email">Email</label><input class="input" id="fg-email" type="email" autocomplete="email" required></div><div class="field"><label for="fg-pw">New password</label>'+pw('fg-pw','At least 8 characters','new-password')+'</div><div class="err" id="aerr" role="alert"></div><button class="btn btn-primary btn-lg btn-block">Set new password</button></form><button class="linkbtn" data-a="authtab" data-v="login">Back to sign in</button>';
+  else if(reg)form='<h1>Create account</h1><p style="color:var(--muted)">Free plan: '+fb+' builds a day, live editor, template store.</p>'
+    +'<form data-f="register" class="bform" novalidate><div class="field"><label for="rg-name">Full name</label><input class="input" id="rg-name" autocomplete="name" placeholder="Your name" required></div>'
+    +'<div class="field"><label for="rg-email">Email</label><input class="input" id="rg-email" type="email" autocomplete="email" placeholder="you@example.com" required></div>'
+    +'<div class="field"><label for="rg-pw">Password</label>'+pw('rg-pw','At least 8 characters','new-password')+'<div class="meter" id="meter" data-s="0"><i></i><i></i><i></i><i></i></div><span class="hint" id="meterlbl">Use 8+ characters with letters, numbers and a symbol.</span></div>'
+    +'<div class="field"><label for="rg-pw2">Confirm password</label>'+pw('rg-pw2','Repeat password','new-password')+'</div>'
+    +'<label class="chk"><input type="checkbox" id="rg-terms"><span>I agree to the Terms of Service and Privacy Policy.</span></label>'
+    +'<div class="err" id="aerr" role="alert"></div><button class="btn btn-primary btn-lg btn-block">Create account</button></form>';
+  else form='<h1>Sign in</h1><p style="color:var(--muted)">Welcome back. Pick up where you left off.</p>'
+    +'<form data-f="login" class="bform" novalidate><div class="field"><label for="lg-email">Email</label><input class="input" id="lg-email" type="email" autocomplete="email" placeholder="you@example.com" required></div>'
+    +'<div class="field"><label for="lg-pw">Password</label>'+pw('lg-pw','Your password','current-password')+'</div>'
+    +'<div style="display:flex;justify-content:flex-end"><button type="button" class="linkbtn" data-a="authtab" data-v="forgot">Forgot password?</button></div>'
+    +'<div class="err" id="aerr" role="alert"></div><button class="btn btn-primary btn-lg btn-block">Sign in</button></form>';
+  return '<div class="auth"><section class="auth-art"><canvas id="cv"></canvas><a class="brand" href="#home">'+logo(40)+'<span><b>'+esc(db.settings.site)+'</b><i>APK Builder</i></span></a>'
+   +'<div><h2>'+(reg?'Build your first APK today.':'Code in. APK out.')+'</h2><p>'+(reg?'One account for your projects, builds, wallet and subscription.':'Sign in to build, download and manage your Android apps.')+'</p></div>'
+   +'<a href="#home" class="linkbtn" style="color:#9FB0FF">← Back to the site</a></section>'
+   +'<section class="auth-form"><div class="auth-box">'
+   +(S.authTab==='forgot'?'':'<div class="seg" role="tablist"><button type="button" class="'+(reg?'':'on')+'" data-a="authtab" data-v="login">Sign in</button><button type="button" class="'+(reg?'on':'')+'" data-a="authtab" data-v="register">Register</button></div>')
+   +form+'</div></section></div>';
+}
+
+/* ---------- home ---------- */
+const typeLabel=t=>({blank:'BLANK',html:'HTML',native:'NATIVE',webview:'WEBVIEW'}[t]||'HTML');
+function projectCard(p){
+  const n=Object.keys(p.files).length;
+  return '<article class="pcard"><div class="cover cv-'+p.type+'"><span class="tbadge">'+typeLabel(p.type)+'</span>'+bot()+'<span class="fcount">'+n+' file'+(n===1?'':'s')+'</span></div><div class="pbody"><h3>'+esc(p.name)+'</h3><small>'+ic('clock',12)+' '+ago(p.updated)+'</small>'
+  +'<div class="prow"><button class="btn btn-sm" data-a="edit" data-id="'+p.id+'">Edit</button><button class="btn btn-sm" data-a="pbuild" data-id="'+p.id+'">Build</button><button class="btn btn-sm btn-danger" data-a="pdel" data-id="'+p.id+'" aria-label="Delete project">'+ic('trash',14)+'</button></div></div></article>';
+}
+const filteredProjects=()=>{const q=S.q.trim().toLowerCase();return myProjects().filter(p=>(S.ptype==='all'||p.type===S.ptype)&&(!q||p.name.toLowerCase().includes(q))).sort((a,b)=>b.updated-a.updated)};
+const plistHTML=(limit)=>{const l=filteredProjects();const list=limit?l.slice(0,limit):l;
+  return '<div class="pgrid"><button class="pnew" data-a="newp">'+ic('plus',26)+'<span>New project</span></button>'+list.map(projectCard).join('')+'</div>'+(!l.length&&S.q?'<p style="margin-top:12px;color:var(--muted)">No project matches “'+esc(S.q)+'”.</p>':'')};
+
+function homeView(){
+  const u=me(),mp=myProjects(),name=u?u.name.split(' ')[0]:'',st=db.settings;
+  const mine=u?db.builds.filter(b=>b.uid===u.id):[];
+  const ok=mine.filter(b=>b.status==='success');
+  const hero='<section class="hero" aria-label="Welcome"><canvas id="cv"></canvas><div class="hero-in"><span class="eyebrow">'+(u?'Dashboard':'Android app builder')+'</span>'
+   +'<h1>'+(u?'Welcome back, '+esc(name):'Turn code into an installable APK.')+'</h1>'
+   +'<p>'+(u?'Pick up a project or ship a new build in minutes.':'Write HTML, Kotlin or Java, or drop in a ZIP. Configure once, build in your browser, install on your phone.')+'</p>'
+   +'<div class="hero-actions"><button class="btn btn-white" data-a="newp">'+ic('plus')+' New Project</button><button class="btn btn-glass" data-a="go" data-r="build">'+ic('bolt')+' Build APK</button><button class="btn btn-glass" data-a="go" data-r="store">'+ic('grid')+' Templates</button><button class="btn btn-glass" data-a="import">'+ic('upload')+' Import Project</button></div></div></section>';
+  const stats='<div class="stats"><div class="stat"><div class="si a">'+ic('folder',22)+'</div><div><b>'+mp.length+'</b><small>My Projects</small></div></div>'
+   +'<div class="stat"><div class="si g">'+ic('download',22)+'</div><div><b>'+ok.length+'</b><small>Builds done</small></div></div>'
+   +'<div class="stat"><div class="si w">'+ic('wallet',22)+'</div><div><b>'+taka(u?u.wallet:0)+'</b><small>Wallet</small></div></div>'
+   +'<div class="stat"><div class="si s">'+ic('star',22)+'</div><div><b style="text-transform:capitalize">'+(u?u.plan:'Free')+'</b><small>Plan</small></div></div></div>';
+  const ann=st.announceOn&&st.announce?'<div class="banner info" style="margin:0 0 14px">'+ic('bell',18)+'<span>'+esc(st.announce)+'</span></div>':'';
+  const maint=st.maintenance?'<div class="banner" style="margin:0 0 14px">'+ic('info',18)+'<span>Builds are paused for maintenance. You can still edit projects.</span></div>':'';
+  let more='';
+  if(u){
+    more='<div class="sec-h"><h2>Recent builds</h2><a href="#projects">All projects '+ic('chev',14)+'</a></div>'
+     +(mine.length?'<div class="blist">'+mine.sort((a,b)=>b.at-a.at).slice(0,4).map(b=>'<div class="bitem"><div class="pico" style="width:40px;height:40px">'+ic('pkg',18)+'</div><div class="grow"><b>'+esc(b.name)+' <small>v'+esc(b.ver)+'</small></b><small>'+esc(b.pkg)+' · '+b.size+' MB · '+ago(b.at)+'</small></div><span class="badge '+(b.status==='success'?'good':'bad')+'">'+b.status+'</span></div>').join('')+'</div>'
+       :'<div class="empty">'+ic('bolt',28)+'<h3>No builds yet</h3><p>Your finished APKs will show up here.</p><button class="btn btn-primary" data-a="go" data-r="build">Build your first APK</button></div>');
+  }else{
+    more='<div class="sec-h"><h2>How it works</h2></div><div class="steps">'
+     +'<div class="step"><i>STEP 1</i><h3>Add your code</h3><p>Write in the editor, start from a template, or import a ZIP from your phone.</p></div>'
+     +'<div class="step"><i>STEP 2</i><h3>Configure the app</h3><p>Name, package, icon, splash screen, permissions and behavior in one form.</p></div>'
+     +'<div class="step"><i>STEP 3</i><h3>Build and install</h3><p>Watch the live build console, download the APK and install it.</p></div></div>'
+     +'<div class="sec-h"><h2>Everything in one place</h2></div><div class="feats">'
+     +[['code','HTML, Kotlin and Java','Edit with highlighting, run a live preview.'],['upload','ZIP import','Bring a whole project from your file manager.'],['shield','Signed release builds','V1 and V2 signing on the build server.'],['grid','Template store','Games, tools and starters ready to remix.'],['lock','Secure converter','Minify and wrap web code before you ship.'],['phone','Built for phones','The whole site works from your Android browser.']].map(f=>'<div class="feat"><div class="pico">'+ic(f[0],18)+'</div><div><b>'+f[1]+'</b><small>'+f[2]+'</small></div></div>').join('')+'</div>';
+  }
+  return ann+maint+hero+stats+'<div class="sec-h"><h2>My Projects</h2><a href="#projects">See all '+ic('chev',14)+'</a></div><div id="plist">'+plistHTML(5)+'</div>'+more;
+}
+
+function projectsView(){
+  const types=[['all','All'],['html','HTML'],['native','Native'],['webview','WebView'],['blank','Blank']];
+  return '<div class="phead"><div class="pico">'+ic('folder',22)+'</div><div style="flex:1"><h1>My Projects</h1><p>'+myProjects().length+' project'+(myProjects().length===1?'':'s')+(me()?'':' · saved in this browser until you sign in')+'</p></div><button class="btn btn-primary" data-a="newp">'+ic('plus',16)+' New</button></div>'
+   +'<div class="chips">'+types.map(t=>'<button class="chip '+(S.ptype===t[0]?'on':'')+'" data-a="ptype" data-v="'+t[0]+'">'+t[1]+'</button>').join('')+'<button class="chip" data-a="import">'+ic('upload',14)+' Import ZIP</button></div>'
+   +'<div id="plist">'+plistHTML()+'</div>';
+}
+
+/* ---------- store ---------- */
+const allTemplates=()=>TPL.filter(t=>!db.hidden.includes(t.id)).concat(db.templates);
+function storeView(){
+  const q=S.q.trim().toLowerCase(),list=allTemplates();
+  const cats=['All'].concat([...new Set(list.map(t=>t.cat))]);
+  const shown=list.filter(t=>(S.cat==='All'||t.cat===S.cat)&&(!q||(t.name+' '+t.desc).toLowerCase().includes(q)));
+  return '<div class="phead"><div class="pico">'+ic('grid',22)+'</div><div><h1>Template Store</h1><p>Start from a working project. Preview it, then make it yours.</p></div></div>'
+   +'<div class="feature"><div><h2>Ship a game by tonight</h2><p>Every template runs in the live preview and builds to an APK without changes.</p></div><button class="btn btn-white" data-a="tpluse" data-id="snake">Use Snake</button></div>'
+   +'<div class="chips">'+cats.map(c=>'<button class="chip '+(S.cat===c?'on':'')+'" data-a="cat" data-v="'+esc(c)+'">'+esc(c)+'</button>').join('')+'</div>'
+   +(shown.length?'<div class="tgrid">'+shown.map(t=>'<article class="tcard"><div class="tart" style="--c1:'+t.c1+';--c2:'+t.c2+'"><span class="tbadge">'+esc(t.cat.toUpperCase())+'</span>'+ic(t.icon||'grid',44)+'</div><div class="tinfo"><h3>'+esc(t.name)+'</h3><p>'+esc(t.desc)+'</p><div class="prow"><button class="btn btn-sm" data-a="tplprev" data-id="'+t.id+'">'+ic('eye',14)+' Preview</button><button class="btn btn-sm btn-primary" data-a="tpluse" data-id="'+t.id+'">Use</button></div></div></article>').join('')+'</div>'
+     :'<div class="empty">'+ic('search',28)+'<h3>No templates found</h3><p>Try another category or search term.</p></div>');
+}
+
+/* ---------- plans, wallet, payments ---------- */
+const PLAN_FEATS={free:['Builds per day set by admin','Live editor and preview','Template store','Standard build queue'],pro:['Unlimited builds','Code encryption, push and ads options','No build watermark','Priority build queue'],studio:['Everything in Pro','Bring your own keystore','Team-ready project export','Fastest build queue']};
+function plansView(){
+  const u=me(),P=db.settings.plans;
+  const card=(k,name,hot)=>'<div class="plan '+(hot?'hot':'')+'"><h3>'+name+(hot?' <span class="proflag">POPULAR</span>':'')+'</h3><div class="pr">'+(P[k].price?taka(P[k].price):'Free')+(P[k].price?'<small> / month</small>':'')+'</div><ul>'
+   +PLAN_FEATS[k].map((f,i)=>'<li>'+ic('check',16)+'<span>'+(k==='free'&&i===0?esc(db.settings.freeBuilds)+' builds per day':f)+'</span></li>').join('')+'</ul>'
+   +(u&&u.plan===k?'<button class="btn btn-block" disabled>Current plan</button>':k==='free'?'<button class="btn btn-block" disabled>Included</button>':'<button class="btn btn-primary btn-block" data-a="buyplan" data-p="'+k+'">Choose '+name+'</button>')+'</div>';
+  return '<div class="phead"><div class="pico">'+ic('star',22)+'</div><div><h1>Subscription</h1><p>Pay from your wallet. Plans last 30 days.</p></div></div><div class="plans">'+card('free','Free')+card('pro','Pro',true)+card('studio','Studio')+'</div>'
+   +(u&&u.plan!=='free'?'<p style="margin-top:14px;color:var(--muted)">Your '+u.plan+' plan renews manually and ends on '+fmtDate(u.exp)+'.</p>':'');
+}
+const stBadge=s=>'<span class="badge '+(s==='approved'?'good':s==='pending'?'warn':'bad')+'">'+s+'</span>';
+function walletView(){
+  const u=me(),mine=db.payments.filter(p=>p.uid===u.id).sort((a,b)=>b.at-a.at).slice(0,6);
+  return '<div class="phead"><div class="pico">'+ic('wallet',22)+'</div><div><h1>Wallet</h1><p>Add money, then spend it on plans.</p></div></div>'
+   +'<div class="walletcard"><div><small>Balance</small><b>'+taka(u.wallet)+'</b></div><button class="btn btn-white" data-a="go" data-r="plans">'+ic('star',16)+' Choose a plan</button></div>'
+   +'<div class="sec-h"><h2>Add money</h2></div><div class="card"><p style="color:var(--muted);margin-bottom:14px">'+esc(db.settings.payInfo)+'</p>'
+   +'<form data-f="topup" class="bform" novalidate><div class="row2"><div class="field"><label for="tp-method">Method</label><select class="input" id="tp-method"><option>bKash</option><option>Nagad</option><option>Rocket</option></select></div><div class="field"><label for="tp-amt">Amount (৳)</label><input class="input" id="tp-amt" type="number" min="50" step="10" placeholder="200" required></div></div>'
+   +'<div class="row2"><div class="field"><label for="tp-trx">Transaction ID</label><input class="input" id="tp-trx" placeholder="8N7A6D5C4B" autocomplete="off" required></div><div class="field"><label for="tp-from">Sender number</label><input class="input" id="tp-from" inputmode="tel" placeholder="01XXXXXXXXX" required></div></div>'
+   +'<div class="err" id="terr" role="alert"></div><button class="btn btn-primary">Submit for approval</button></form></div>'
+   +'<div class="sec-h"><h2>Recent activity</h2><a href="#payments">All payments '+ic('chev',14)+'</a></div>'+payTable(mine,false);
+}
+function payTable(list,admin){
+  if(!list.length)return '<div class="empty">'+ic('receipt',28)+'<h3>No payments yet</h3><p>Top-ups and plan purchases appear here.</p></div>';
+  return '<div class="tbl-wrap"><table class="tbl"><thead><tr>'+(admin?'<th>User</th>':'')+'<th>Date</th><th>Type</th><th>Method</th><th>Reference</th><th>Amount</th><th>Status</th>'+(admin?'<th></th>':'')+'</tr></thead><tbody>'
+   +list.map(p=>'<tr>'+(admin?'<td>'+esc(userName(p.uid))+'</td>':'')+'<td>'+fmtDate(p.at)+'</td><td>'+(p.type==='plan'?'Plan: '+esc(p.plan):'Top-up')+'</td><td>'+esc(p.method)+'</td><td class="mono">'+esc(p.trx||'—')+'</td><td><b>'+taka(p.amount)+'</b></td><td>'+stBadge(p.status)+'</td>'
+     +(admin?'<td class="act">'+(p.status==='pending'?'<button class="btn btn-sm btn-primary" data-a="payok" data-id="'+p.id+'">Approve</button><button class="btn btn-sm btn-danger" data-a="payno" data-id="'+p.id+'">Reject</button>':'')+'</td>':'')+'</tr>').join('')+'</tbody></table></div>';
+}
+function paymentsView(){
+  const u=me();
+  return '<div class="phead"><div class="pico">'+ic('receipt',22)+'</div><div><h1>My Payments</h1><p>Every top-up and plan purchase on your account.</p></div></div>'+payTable(db.payments.filter(p=>p.uid===u.id).sort((a,b)=>b.at-a.at),false);
+}
+
+/* ---------- profile & about ---------- */
+function profileView(){
+  const u=me(),mine=db.builds.filter(b=>b.uid===u.id);
+  return '<div class="phead"><span class="av" style="width:56px;height:56px;font-size:18px">'+esc(initials(u.name))+'</span><div><h1>'+esc(u.name)+'</h1><p>'+esc(u.email)+' · joined '+fmtDate(u.created)+'</p></div></div>'
+   +'<div class="stats" style="margin:0 0 16px"><div class="stat"><div class="si a">'+ic('folder',22)+'</div><div><b>'+myProjects().length+'</b><small>Projects</small></div></div><div class="stat"><div class="si g">'+ic('pkg',22)+'</div><div><b>'+mine.length+'</b><small>Builds</small></div></div><div class="stat"><div class="si s">'+ic('star',22)+'</div><div><b style="text-transform:capitalize">'+u.plan+'</b><small>Plan</small></div></div><div class="stat"><div class="si w">'+ic('wallet',22)+'</div><div><b>'+taka(u.wallet)+'</b><small>Wallet</small></div></div></div>'
+   +'<div class="twocol"><div class="card"><h3 style="margin-bottom:12px">Account</h3><form data-f="profile" class="bform" novalidate><div class="field"><label for="pf-name">Full name</label><input class="input" id="pf-name" value="'+esc(u.name)+'" required></div><div class="field"><label for="pf-email">Email</label><input class="input" id="pf-email" value="'+esc(u.email)+'" disabled></div><button class="btn btn-primary">Save changes</button></form></div>'
+   +'<div class="card"><h3 style="margin-bottom:12px">Change password</h3><form data-f="chpw" class="bform" novalidate><div class="field"><label for="cp-old">Current password</label><input class="input" id="cp-old" type="password" autocomplete="current-password"></div><div class="field"><label for="cp-new">New password</label><input class="input" id="cp-new" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="err" id="cperr" role="alert"></div><button class="btn btn-primary">Update password</button></form></div></div>'
+   +'<div class="card" style="margin-top:14px;display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div><h3>Delete account</h3><small>Removes your profile, projects and build history from this site.</small></div><button class="btn btn-danger" data-a="delacct">Delete account</button></div>';
+}
+function aboutView(){
+  const faq=[['Do I need to install anything?','No. The editor, configuration and build console all run in your browser.'],['Which project types can I build?','HTML, CSS and JavaScript projects, WebView wrappers for any website, and native Kotlin or Java projects.'],['Can I import an existing project?','Yes. Use Import Project and pick a ZIP file from your phone or computer.'],['How do I install the APK?','Download it, open it from your notifications or file manager, and allow installs from this source when Android asks.'],['Is my code private?','Projects belong to your account. Only you and site admins can open them.']];
+  return '<div class="phead"><div class="pico">'+ic('info',22)+'</div><div><h1>About '+esc(db.settings.site)+'</h1><p>Build Android apps from code, from any browser.</p></div></div>'
+   +'<div class="steps"><div class="step"><i>STEP 1</i><h3>Create or import</h3><p>Start blank, use a template, write native code or import a ZIP.</p></div><div class="step"><i>STEP 2</i><h3>Configure</h3><p>Set name, package, icon, permissions and behavior.</p></div><div class="step"><i>STEP 3</i><h3>Build</h3><p>Follow the live console and download your APK.</p></div></div>'
+   +'<div class="sec-h"><h2>Questions</h2></div><div class="faq">'+faq.map(f=>'<details><summary>'+f[0]+'</summary><p>'+f[1]+'</p></details>').join('')+'</div>';
+}
+
+
+/* ---------- zip, files, projects ---------- */
+const TEXT_EXT=/\.(html?|css|js|mjs|json|xml|txt|md|kt|kts|java|gradle|properties|svg|csv|yml|yaml|pro|cfg|ini|sh|bat)$/i;
+const MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',ico:'image/x-icon',svg:'image/svg+xml',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',mp4:'video/mp4',ttf:'font/ttf',woff:'font/woff',woff2:'font/woff2',otf:'font/otf'};
+const mimeOf=n=>MIME[(n.split('.').pop()||'').toLowerCase()]||'application/octet-stream';
+const fsort=(a,b)=>a==='index.html'?-1:b==='index.html'?1:a.localeCompare(b);
+const bytesOf=files=>Object.values(files).reduce((s,c)=>s+(isBin(c)?Math.floor((c.length-c.indexOf(',')-1)*.75):new Blob([c]).size),0);
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},2500)}
+const needZip=()=>{if(typeof JSZip==='undefined'){toast('The ZIP library did not load. Check your connection and reload.','err');return false}return true};
+async function zipOf(files,extra){
+  const z=new JSZip();
+  for(const n in files){const c=files[n];if(isBin(c))z.file(n,c.split(',')[1],{base64:true});else z.file(n,c)}
+  for(const n in (extra||{}))z.file(n,extra[n]);
+  return z.generateAsync({type:'blob',compression:'DEFLATE'});
+}
+async function readFileAny(f){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(r.error);r.onload=()=>res(r.result);TEXT_EXT.test(f.name)?r.readAsText(f):r.readAsDataURL(f)})}
+function newProjectObj(o){
+  const p={id:uid(),owner:owner(),name:o.name,type:o.type,pkg:o.pkg||'com.'+slug(o.name)+'.app',created:now(),updated:now(),files:o.files};
+  db.projects.push(p);save();return p;
+}
+function openProject(id,tab){S.cur=id;S.tab=tab||null;S.open=[];S.saved=true;S.filesOpen=false;go('editor')}
+async function importZip(file){
+  if(!file)return;
+  if(!/\.zip$/i.test(file.name)){toast('Choose a .zip file.','err');return}
+  if(file.size>25*1048576){toast('That ZIP is larger than 25 MB.','err');return}
+  if(!needZip())return;
+  try{
+    const z=await JSZip.loadAsync(file);
+    let entries=Object.values(z.files).filter(f=>!f.dir&&!/(^|\/)(__MACOSX|\.git|node_modules)\//.test(f.name)&&!/\.DS_Store$/.test(f.name));
+    if(!entries.length){toast('That ZIP is empty.','err');return}
+    const roots=new Set(entries.map(f=>f.name.split('/')[0]));
+    const strip=roots.size===1&&entries.every(f=>f.name.includes('/'))?[...roots][0]+'/':'';
+    const files={};let total=0;
+    for(const f of entries.slice(0,500)){
+      const n=f.name.slice(strip.length);if(!n)continue;
+      if(TEXT_EXT.test(n)){files[n]=await f.async('string')}else{files[n]='data:'+mimeOf(n)+';base64,'+await f.async('base64')}
+      total+=files[n].length;if(total>12*1048576){toast('Project is too large to store in the browser (12 MB limit).','err');return}
+    }
+    const names=Object.keys(files);
+    const type=names.some(n=>/\.(kt|java)$/.test(n)||/AndroidManifest\.xml$/.test(n)||/build\.gradle/.test(n))?'native':names.includes('index.html')||names.some(n=>/\.html?$/.test(n))?'html':'blank';
+    const name=file.name.replace(/\.zip$/i,'').replace(/[-_]+/g,' ').slice(0,40)||'Imported project';
+    const p=newProjectObj({name,type,files});
+    addLog('Imported project '+name);
+    toast('Imported '+names.length+' files','ok');openProject(p.id);
+  }catch(err){toast('Could not read that ZIP file.','err')}
+}
+
+/* ---------- new project ---------- */
+function openNewProject(){
+  const opt=(v,ico,t,d,chk)=>'<label class="opt"><input type="radio" name="np-type" value="'+v+'"'+(chk?' checked':'')+'><span><em>'+ic(ico,22)+'</em><b>'+t+'</b><small>'+d+'</small></span></label>';
+  modal(mhead('Create New Project')+'<form data-f="newp" class="bform" novalidate><div class="field"><label for="np-name">Project name</label><input class="input" id="np-name" placeholder="My Awesome App" maxlength="40" autocomplete="off"></div>'
+   +'<div><div class="lbl" style="margin-bottom:8px">Start with</div><div class="opts">'+opt('blank','file','Blank','Empty project',1)+opt('webview','globe','WebView','Website → App')+opt('html','code','HTML/CSS/JS','Custom code')+opt('native','terminal','Kotlin/Java','Native Android')+'</div></div>'
+   +'<div class="field" id="np-urlf" hidden><label for="np-url">Website URL</label><input class="input" id="np-url" type="url" placeholder="https://mywebsite.com"></div>'
+   +'<div class="field" id="np-langf" hidden><label for="np-lang">Language</label><select class="input" id="np-lang"><option value="kotlin">Kotlin</option><option value="java">Java</option></select></div>'
+   +'<div class="field"><label for="np-pkg">Package name</label><input class="input" id="np-pkg" placeholder="com.myapp.name" autocomplete="off"><span class="hint">Lowercase, dot-separated. Built from the name if left empty.</span></div>'
+   +'<div class="err" id="nperr" role="alert"></div><button class="btn btn-primary btn-lg btn-block">'+ic('plus')+' Create Project</button></form>');
+}
+
+/* ---------- editor ---------- */
+let saveT=0,prevT=0;
+function editorView(){
+  const p=curProject();
+  if(!p)return '<div class="empty">'+ic('code',30)+'<h3>No project open</h3><p>Create a project or open one from your list to start editing.</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary" data-a="newp">'+ic('plus',16)+' New project</button><button class="btn" data-a="go" data-r="projects">My projects</button></div></div>';
+  if(p.owner!==owner()&&!isAdmin())return '<div class="empty">'+ic('lock',30)+'<h3>This project belongs to another account</h3></div>';
+  const names=Object.keys(p.files).sort(fsort);
+  if(!S.tab||!(S.tab in p.files))S.tab=names.includes('index.html')?'index.html':names[0];
+  S.open=S.open.filter(n=>n in p.files);if(S.tab&&!S.open.includes(S.tab))S.open.push(S.tab);
+  const web=p.type==='html'||p.type==='blank';
+  return '<div class="edshell '+(S.filesOpen?'f':'')+'" id="edshell" data-pane="'+(web?S.pane:'code')+'"><aside class="files" id="files">'+filesHTML(p)+'</aside>'
+   +'<div class="edcol"><div class="edtool"><div class="nm">'+ic('folder',16)+'<span>'+esc(p.name)+'</span><span class="badge" id="savechip">Saved</span></div>'
+   +'<button class="btn btn-sm paneseg" data-a="files">'+ic('file',14)+' Files</button>'
+   +'<button class="btn btn-sm" data-a="save">'+ic('save',14)+' Save</button>'
+   +(web?'<button class="btn btn-sm" data-a="run">'+ic('play',14)+' Run</button>':'')
+   +'<button class="btn btn-sm" data-a="zipdl" aria-label="Download ZIP">'+ic('download',14)+' ZIP</button>'
+   +'<button class="btn btn-sm btn-primary" data-a="ebuild">'+ic('bolt',14)+' Build APK</button></div>'
+   +(web?'<div class="paneseg" style="padding:8px 10px 0"><div class="seg" style="margin:0"><button class="'+(S.pane==='code'?'on':'')+'" data-a="pane" data-v="code">Code</button><button class="'+(S.pane==='prev'?'on':'')+'" data-a="pane" data-v="prev">Preview</button></div></div>':'')
+   +'<div class="panes"><section class="codepane"><div class="tabs" id="tabs">'+tabsHTML(p)+'</div><div class="ed" id="edwrap">'+edInner(p)+'</div></section>'
+   +'<section class="prevpane">'+(web?prevHTML():nativeHTML(p))+'</section></div></div></div>';
+}
+const filesHTML=p=>'<h4>Files <span style="display:flex;gap:2px"><button class="iconbtn" style="width:28px;height:28px;border-radius:8px" data-a="newfile" aria-label="New file">'+ic('plus',14)+'</button><button class="iconbtn" style="width:28px;height:28px;border-radius:8px" data-a="upfiles" aria-label="Upload files">'+ic('upload',14)+'</button></span></h4>'
+  +Object.keys(p.files).sort(fsort).map(n=>'<div class="fl '+(n===S.tab?'on':'')+'" data-a="openfile" data-n="'+esc(n)+'">'+ic('file',14)+'<span title="'+esc(n)+'">'+esc(n)+'</span><button data-a="renfile" data-n="'+esc(n)+'" aria-label="Rename">'+ic('edit',13)+'</button><button data-a="delfile" data-n="'+esc(n)+'" aria-label="Delete file">'+ic('trash',13)+'</button></div>').join('');
+const tabsHTML=p=>S.open.map(n=>'<div class="tab '+(n===S.tab?'on':'')+'" data-a="openfile" data-n="'+esc(n)+'">'+esc(n.split('/').pop())+'<button data-a="closetab" data-n="'+esc(n)+'" aria-label="Close tab">'+ic('x',12)+'</button></div>').join('');
+function edInner(p){
+  const c=p.files[S.tab];
+  if(isBin(c))return '<div class="binfile">'+(/^data:image/.test(c)?'<img src="'+c+'" alt="" style="max-width:160px;max-height:160px;border-radius:12px">':ic('file',32))+'<b>'+esc(S.tab)+'</b><small>Binary file · '+Math.round(bytesOf({x:c})/1024)+' KB</small></div>';
+  return '<div class="gut" id="gut"></div><div class="stack"><pre id="hl" aria-hidden="true"><code></code></pre><textarea id="ta" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Code editor">'+esc(c)+'</textarea></div>';
+}
+const prevHTML=()=>'<div class="pvhead"><span><i class="live"></i>Live Preview</span><button class="btn btn-sm" data-a="live" id="livebtn">'+(S.live?'Live: on':'Live: off')+'</button><button class="btn btn-sm" data-a="pdev" aria-label="Phone frame">'+ic('phone',14)+'</button><button class="btn btn-sm" data-a="pcons" aria-label="Console">'+ic('terminal',14)+'</button><button class="btn btn-sm" data-a="run" aria-label="Refresh preview">'+ic('refresh',14)+'</button></div>'
+  +'<div class="pvstage '+(S.dev?'dev':'')+'" id="pvstage"><iframe id="pvf" title="Live preview" sandbox="allow-scripts allow-forms allow-modals"></iframe></div><div class="cons-p" id="pcons" '+(S.cons?'':'hidden')+'></div>';
+function nativeHTML(p){
+  const tree=Object.keys(p.files).sort().map(n=>'├─ '+esc(n)).join('\n');
+  const wv=p.type==='webview';let url='';if(wv){try{url=JSON.parse(p.files['app.json']).url}catch(e){}}
+  return '<div class="nativebox"><div class="pico">'+ic(wv?'globe':'terminal',22)+'</div><h3>'+(wv?'WebView project':'Native project')+'</h3><p style="color:var(--muted)">'+(wv?'This app loads <b>'+esc(url||'your website')+'</b> inside a WebView. Edit app.json to change the address.':'Native code compiles on the build server, so there is no live preview. Press Build APK when you are ready.')+'</p><div class="lbl">Package</div><code>'+esc(p.pkg)+'</code><div class="lbl">Structure</div><pre class="tree">'+esc(p.name)+'/\n'+tree+'</pre></div>';
+}
+function paintEditor(){
+  const ta=$('#ta');if(!ta)return;
+  $('#hl code').innerHTML=hl(ta.value,langOf(S.tab))+'\n';
+  const n=ta.value.split('\n').length;$('#gut').textContent=Array.from({length:n},(_,i)=>i+1).join('\n');
+  syncScroll();
+}
+function syncScroll(){const ta=$('#ta');if(!ta)return;const h=$('#hl');h.scrollTop=ta.scrollTop;h.scrollLeft=ta.scrollLeft;$('#gut').scrollTop=ta.scrollTop}
+function setSaved(){const c=$('#savechip');if(c){c.textContent=S.saved?'Saved':'Unsaved';c.className='badge '+(S.saved?'good':'warn')}}
+function commitSave(){clearTimeout(saveT);save();S.saved=true;setSaved()}
+function refreshPreview(){const p=curProject(),f=$('#pvf');if(!p||!f)return;const c=$('#pcons');if(c)c.innerHTML='';f.srcdoc=previewDoc(p.files)}
+function bindEditor(){
+  const ta=$('#ta'),p=curProject();if(!ta||!p)return;
+  paintEditor();
+  ta.addEventListener('scroll',syncScroll);
+  ta.addEventListener('input',()=>{p.files[S.tab]=ta.value;p.updated=now();S.saved=false;setSaved();paintEditor();clearTimeout(saveT);saveT=setTimeout(commitSave,1200);if(S.live){clearTimeout(prevT);prevT=setTimeout(refreshPreview,700)}});
+  const ins=t=>{if(!document.execCommand('insertText',false,t)){ta.setRangeText(t,ta.selectionStart,ta.selectionEnd,'end');ta.dispatchEvent(new Event('input'))}};
+  ta.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();commitSave();toast('Saved','ok');return}
+    if(e.key==='Tab'){e.preventDefault();ins('  ')}
+    else if(e.key==='Enter'&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey){
+      const s=ta.selectionStart,v=ta.value,ls=v.lastIndexOf('\n',s-1)+1,ind=(v.slice(ls,s).match(/^[ \t]*/)||[''])[0];
+      e.preventDefault();ins('\n'+ind+(v.charAt(s-1)==='{'?'  ':''));
+    }
+  });
+}
+function swapFile(){
+  const p=curProject();if(!p)return;
+  if(!S.open.includes(S.tab))S.open.push(S.tab);
+  $('#tabs').innerHTML=tabsHTML(p);$('#files').innerHTML=filesHTML(p);$('#edwrap').innerHTML=edInner(p);bindEditor();
+}
+if(!window.__arapkMsg){window.__arapkMsg=1;addEventListener('message',e=>{const d=e.data;if(!d||!d.arapk)return;const c=$('#pcons');if(!c)return;const l=document.createElement('div');l.className=d.l;l.textContent='› '+d.m;c.appendChild(l);c.scrollTop=c.scrollHeight})}
+
+/* ---------- build config ---------- */
+const CFG0={tab:'web',name:'',pkg:'',pkgTouched:false,source:'url',url:'',projectId:'',vname:'1.0',vcode:'1',icon:'',splash:'',status:'#2F4BFF',hideTitle:true,spinner:false,fullscreen:false,exitConfirm:true,pullRefresh:false,pinchZoom:false,autoplay:false,pcMode:false,longPress:false,camera:false,mic:false,location:false,notifications:false,storage:false,darkMode:false,minify:true,encrypt:false,push:false,ads:false,fcm:'',admob:'',shareMsg:'Check out this app!',shareLink:'',orient:'auto',minSdk:'21',targetSdk:'34',css:'',js:'',webhook:'',ua:'',ks:'auto',ksAlias:'',ksPass:''};
+const saveCfg=()=>{const c=Object.assign({},S.cfg);store.set(CKEY,c)};
+const sdkLabel=v=>({21:'Android 5+',23:'Android 6+',26:'Android 8+',29:'Android 10+'}[v]||'API '+v);
+function estSize(){
+  const c=S.cfg;let mb=8.4;
+  if(c.source==='project'){const p=db.projects.find(x=>x.id===c.projectId);if(p)mb+=bytesOf(p.files)/1048576}
+  if(c.source==='zip'&&S.zip)mb+=S.zip.size/1048576;
+  if(c.icon)mb+=.1;if(c.splash)mb+=.2;if(c.encrypt)mb+=.4;if(c.ads)mb+=1.8;if(c.push)mb+=1.2;
+  return Math.max(8.4,mb);
+}
+function prevCard(){
+  const c=S.cfg,nm=c.name||'My App';
+  return '<div class="pv"><div class="pv-ic" style="background:linear-gradient(135deg,'+esc(c.status)+',#10186A)">'+(c.icon?'<img src="'+c.icon+'" alt="">':esc(initials(nm)))+'</div><b>'+esc(nm)+'</b><code>'+esc(c.pkg||'com.myapp.name')+'</code>'
+   +'<dl><div><dd>'+esc(c.vname||'1.0')+'</dd><dt>Version</dt></div><div><dd>'+sdkLabel(c.minSdk)+'</dd><dt>Min SDK</dt></div><div><dd>~'+Math.round(estSize())+' MB</dd><dt>Size</dt></div></dl><div class="deep">Deep link: '+esc((c.pkg||'com.myapp.name'))+'://</div></div>';
+}
+const updPrev=()=>{const e=$('#prevcard');if(e)e.innerHTML=prevCard()};
+function buildView(){
+  const c=S.cfg,web=c.tab==='web',projs=myProjects().filter(p=>web?p.type!=='native':p.type==='native');
+  const srcTabs=web?[['url','Website URL','globe'],['project','My Projects','folder']]:[['project','My Projects','folder'],['zip','Upload ZIP','upload']];
+  if(!srcTabs.some(x=>x[0]===c.source))c.source=srcTabs[0][0];
+  const fld=(id,label,key,o={})=>'<div class="field"><label for="'+id+'">'+label+(o.req?' *':'')+'</label><input class="input" id="'+id+'" data-cfg="'+key+'" type="'+(o.type||'text')+'" value="'+esc(c[key])+'" placeholder="'+esc(o.ph||'')+'"'+(o.attrs||'')+'>'+(o.hint?'<span class="hint">'+o.hint+'</span>':'')+'</div>';
+  const sel=(id,label,key,opts)=>'<div class="field"><label for="'+id+'">'+label+'</label><select class="input" id="'+id+'" data-cfg="'+key+'">'+opts.map(o=>'<option value="'+o[0]+'"'+(String(c[key])===String(o[0])?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>';
+  const tg=(key,t,d,o={})=>'<label class="tg '+(c[key]?'on':'')+(o.pro&&!isPro()?' locked':'')+'" for="tg-'+key+'"><span><b>'+t+(o.pro?' <span class="proflag">PRO</span>':'')+'</b><small>'+d+'</small></span><input type="checkbox" id="tg-'+key+'" data-cfg="'+key+'"'+(c[key]?' checked':'')+(o.pro?' data-pro="1"':'')+'><span class="sw"></span></label>';
+  const upl=(k,label,hint)=>'<div class="field"><label>'+label+'</label><label class="upl" for="f-'+k+'" id="upl-'+k+'">'+uplInner(k,label,hint)+'<input type="file" id="f-'+k+'" accept="image/*" data-img="'+k+'" hidden></label></div>';
+  let src='';
+  if(c.source==='url')src=fld('b-url','Website URL','url',{req:1,type:'url',ph:'https://mywebsite.com',attrs:' inputmode="url" autocomplete="off"'});
+  else if(c.source==='project')src='<div class="field"><label for="b-proj">Project *</label><select class="input" id="b-proj" data-cfg="projectId"><option value="">'+(projs.length?'Select a project':'No matching projects yet')+'</option>'+projs.map(p=>'<option value="'+p.id+'"'+(c.projectId===p.id?' selected':'')+'>'+esc(p.name)+' ('+typeLabel(p.type)+')</option>').join('')+'</select></div>';
+  else src='<div class="field"><label for="b-zip">Source ZIP *</label><input class="input" id="b-zip" type="file" accept=".zip" data-zip="1" style="padding-top:10px">'+(S.zip?'<span class="hint">Selected: '+esc(S.zip.name)+' ('+(S.zip.size/1048576).toFixed(1)+' MB)</span>':'<span class="hint">Gradle project, zipped. Max 25 MB.</span>')+'</div>';
+  const behave=web?'<div class="grp">App behavior</div><div class="tgs">'
+    +tg('hideTitle','Hide Title Bar','Hides the toolbar')+tg('spinner','Loading Spinner','Page load spinner')+tg('fullscreen','Fullscreen','Hides the status bar')+tg('exitConfirm','Exit Confirmation','Press back twice to exit')+'</div>'
+    +'<div class="grp">Interaction</div><div class="tgs">'+tg('pullRefresh','Pull to Refresh','Pull down to refresh')+tg('pinchZoom','Pinch Zoom','Pinch with two fingers to zoom')+tg('autoplay','Media Autoplay','Auto play video')+tg('pcMode','PC Mode','Desktop user-agent')+tg('longPress','Long Press Menu','Context menu')+'</div>'
+    :'<div class="grp">Build options</div><div class="tgs">'+tg('minify','Shrink with R8','Smaller, harder to reverse')+'</div>';
+  const perms='<div class="grp">Permissions</div><div class="tgs">'+tg('camera','Camera Access','Camera permission')+tg('mic','Microphone','Mic permission')+tg('location','Location','Fine location')+tg('notifications','Notifications','Post notifications')+tg('storage','File Access','Read storage')+'</div>'
+    +(web?'<div class="grp">Appearance</div><div class="tgs">'+tg('darkMode','Dark Mode Support','Auto dark rendering for websites')+'</div>':'');
+  return '<div class="phead"><div class="pico">'+ic('bolt',22)+'</div><div><h1>Build APK</h1><p>Convert your project to an Android APK</p></div></div>'
+   +(db.settings.maintenance?'<div class="banner">'+ic('info',18)+'<span>Builds are paused for maintenance. You can still configure your app.</span></div>':'')
+   +'<div class="seg" role="tablist"><button class="'+(web?'on':'')+'" data-a="btab" data-v="web">'+ic('globe',15)+' HTML / CSS / JS</button><button class="'+(!web?'on':'')+'" data-a="btab" data-v="native">'+ic('code',15)+' Kotlin / Java</button></div>'
+   +'<div class="bgrid"><div class="bform">'
+   +'<section class="bsec"><header><i>1</i>App Information</header><div class="bbody"><div class="row2">'+fld('b-name','App name','name',{req:1,ph:'My App',attrs:' maxlength="30" autocomplete="off"'})+fld('b-pkg','Package name','pkg',{req:1,ph:'com.myapp.name',hint:'Lowercase, dot-separated',attrs:' autocapitalize="off" autocomplete="off"'})+'</div>'
+   +'<div class="field"><label>App source</label><div class="seg" style="margin:0">'+srcTabs.map(s=>'<button type="button" class="'+(c.source===s[0]?'on':'')+'" data-a="bsrc" data-v="'+s[0]+'">'+ic(s[2],14)+' '+s[1]+'</button>').join('')+'</div></div>'+src
+   +'<div class="row2">'+fld('b-vn','Version name','vname',{ph:'1.0'})+fld('b-vc','Version code','vcode',{type:'number',ph:'1',attrs:' min="1" step="1" inputmode="numeric"'})+'</div></div></section>'
+   +'<section class="bsec"><header><i>2</i>Icon &amp; Branding</header><div class="bbody"><div class="row2">'+upl('icon','App icon','512×512 PNG')+upl('splash','Splash screen','1080px+')+'</div>'
+   +'<div class="field"><label for="b-status">Status bar color</label><div class="colorrow"><input type="color" id="b-status" data-cfg="status" value="'+esc(c.status)+'" aria-label="Pick status bar color"><input class="input" id="b-status-hex" data-cfg="status" value="'+esc(c.status)+'" maxlength="7" autocapitalize="off"></div></div></div></section>'
+   +'<section class="bsec"><header><i>3</i>Behavior &amp; Permissions</header><div class="bbody">'+behave+perms+'</div></section>'
+   +'<details class="bsec"><summary><i>4</i>Pro Features <span class="proflag">PRO</span><span class="opt-t">Encryption · Push · Ads '+ic('chev',14)+'</span></summary><div class="bbody">'
+   +(isPro()?'':'<div class="banner info" style="margin:0">'+ic('star',18)+'<span>These options unlock on a paid plan. <a href="#plans">See plans</a></span></div>')
+   +'<div class="tgs">'+tg('encrypt','Code Encryption','Protect bundled assets',{pro:1})+tg('push','Push Notifications','Firebase messaging',{pro:1})+tg('ads','Ads','AdMob banner and interstitial',{pro:1})+'</div>'
+   +'<div class="row2">'+fld('b-fcm','Firebase server key','fcm',{ph:'Only if push is on'})+fld('b-admob','AdMob app ID','admob',{ph:'ca-app-pub-…'})+'</div></div></details>'
+   +'<details class="bsec"><summary><i>5</i>Share &amp; Rate <span class="opt-t">Optional</span></summary><div class="bbody">'+fld('b-share','Share message','shareMsg',{ph:'Check out this app!'})+fld('b-link','Share link (optional)','shareLink',{type:'url',ph:'https://play.google.com/store/apps/details?id=…'})+'<span class="hint">Works when the website calls AndroidDownloader.shareApp() and AndroidDownloader.rateApp().</span></div></details>'
+   +'<details class="bsec"><summary><i>6</i>Advanced / Developer <span class="opt-t">Custom CSS/JS, webhooks '+ic('chev',14)+'</span></summary><div class="bbody"><div class="row2">'
+   +sel('b-orient','Orientation','orient',[['auto','Auto rotate'],['portrait','Portrait'],['landscape','Landscape']])+sel('b-ks','Signing key','ks',[['auto','Auto-generated release key'],['own','My own keystore (Studio)']])+'</div>'
+   +'<div class="row2">'+sel('b-min','Min SDK','minSdk',[['21','21 · Android 5'],['23','23 · Android 6'],['26','26 · Android 8'],['29','29 · Android 10']])+sel('b-tgt','Target SDK','targetSdk',[['33','33 · Android 13'],['34','34 · Android 14'],['35','35 · Android 15']])+'</div>'
+   +(c.ks==='own'?'<div class="row2">'+fld('b-ksa','Key alias','ksAlias',{ph:'release'})+fld('b-ksp','Keystore password','ksPass',{type:'password',attrs:' autocomplete="off"'})+'</div>':'')
+   +(web?'<div class="field"><label for="b-css">Custom CSS</label><textarea class="input" id="b-css" data-cfg="css" placeholder="Injected into every page" style="font-family:var(--f-mono);font-size:12px">'+esc(c.css)+'</textarea></div><div class="field"><label for="b-js">Custom JavaScript</label><textarea class="input" id="b-js" data-cfg="js" placeholder="Runs after each page loads" style="font-family:var(--f-mono);font-size:12px">'+esc(c.js)+'</textarea></div>'+fld('b-ua','User-agent override','ua',{ph:'Leave empty for default'}):'')
+   +fld('b-hook','Build webhook URL','webhook',{type:'url',ph:'https://example.com/hook (called when the build ends)'})+'</div></details>'
+   +'<button class="btn btn-primary btn-lg btn-block" data-a="dobuild" id="build2">'+ic('bolt',18)+' Build APK</button></div>'
+   +'<aside class="bside"><div id="prevcard">'+prevCard()+'</div><button class="btn btn-primary btn-lg btn-block" data-a="dobuild" id="build1">'+ic('bolt',18)+' BUILD APK</button></aside></div>';
+}
+function uplInner(k,label,hint){const v=S.cfg[k];return v?'<img src="'+v+'" alt="'+esc(label)+'"><b>'+esc(label)+'</b><span>Tap to replace</span>':ic(k==='icon'?'phone':'layers',26)+'<b>'+esc(label)+'</b><span>'+esc(hint)+'</span>'}
+function readImage(file,mode){
+  return new Promise((res,rej)=>{
+    const img=new Image(),u=URL.createObjectURL(file);
+    img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('bad image'))};
+    img.onload=()=>{
+      const cv=document.createElement('canvas'),c=cv.getContext('2d');
+      if(mode==='icon'){cv.width=cv.height=512;const k=Math.max(512/img.width,512/img.height);c.drawImage(img,(512-img.width*k)/2,(512-img.height*k)/2,img.width*k,img.height*k);res(cv.toDataURL('image/png'))}
+      else{const k=Math.min(1,1080/Math.max(img.width,img.height));cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);c.drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',.85))}
+      URL.revokeObjectURL(u);
+    };
+    img.src=u;
+  });
+}
+function cfgSet(t){
+  const k=t.dataset.cfg,c=S.cfg;
+  if(t.type==='checkbox'){
+    if(t.dataset.pro&&!isPro()&&t.checked){t.checked=false;toast('Pro feature. Pick a plan to unlock it.','err');return}
+    c[k]=t.checked;const l=t.closest('.tg');if(l)l.classList.toggle('on',t.checked);
+  }else{
+    let v=t.value;
+    if(k==='pkg'){v=v.toLowerCase().replace(/[^a-z0-9_.]/g,'');t.value=v;c.pkgTouched=true}
+    if(k==='status'){if(/^#[0-9a-fA-F]{6}$/.test(v)){$$('[data-cfg="status"]').forEach(x=>{if(x!==t)x.value=v})}else if(t.type!=='color')return}
+    if(k==='ks'&&v==='own'&&!(me()&&me().plan==='studio')){toast('Your own keystore needs the Studio plan.','err');t.value='auto';return}
+    c[k]=v;
+    if(k==='projectId'){const pj=db.projects.find(x=>x.id===v);if(pj&&!c.name.trim()){c.name=pj.name;c.pkg=pj.pkg;const a=$('#b-name'),b=$('#b-pkg');if(a)a.value=c.name;if(b)b.value=c.pkg}}
+    if(k==='name'&&!c.pkgTouched){c.pkg='com.'+slug(v)+'.app';const pk=$('#b-pkg');if(pk)pk.value=c.pkg}
+    if(k==='ks'||k==='projectId'){saveCfg();if(k==='ks'){render();return}}
+  }
+  saveCfg();updPrev();
+}
+
+/* ---------- build runner ---------- */
+const SCRIPT=[[0,'Allocating build worker…'],[0,'Verifying account and plan…'],[1,'Fetching project source…'],[1,'Updating Android Manifest…'],[1,'Writing app config (JSON)…'],[2,'Injecting assets into APK…'],[2,'Compiling resources…'],[2,'Packaging & compressing APK…'],[3,'Aligning with zipalign…'],[3,'Signing with V1 + V2 scheme…'],[4,'Build complete.']];
+function genManifest(c){
+  const perms=[['INTERNET',1],['CAMERA',c.camera],['RECORD_AUDIO',c.mic],['ACCESS_FINE_LOCATION',c.location],['POST_NOTIFICATIONS',c.notifications||c.push],['READ_EXTERNAL_STORAGE',c.storage]].filter(x=>x[1]).map(x=>'    <uses-permission android:name="android.permission.'+x[0]+'" />').join('\n');
+  const o={auto:'unspecified',portrait:'portrait',landscape:'landscape'}[c.orient]||'unspecified';
+  return '<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android"\n    package="'+esc(c.pkg)+'"\n    android:versionCode="'+esc(c.vcode)+'"\n    android:versionName="'+esc(c.vname)+'">\n\n'+perms+'\n\n    <uses-sdk android:minSdkVersion="'+c.minSdk+'" android:targetSdkVersion="'+c.targetSdk+'" />\n\n    <application\n        android:label="'+esc(c.name)+'"\n        android:icon="@mipmap/ic_launcher"\n        android:theme="@style/'+(c.hideTitle?'Theme.NoActionBar':'Theme.Default')+'">\n        <activity\n            android:name=".MainActivity"\n            android:exported="true"\n            android:screenOrientation="'+o+'">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n';
+}
+async function startBuild(){
+  const c=S.cfg,u=me(),web=c.tab==='web',bad=[];
+  const mark=(id,m)=>{bad.push(m);const e=$('#'+id);if(e)e.classList.add('bad')};
+  $$('.input.bad').forEach(e=>e.classList.remove('bad'));
+  if(!c.name.trim())mark('b-name','Enter an app name.');
+  if(!validPkg(c.pkg))mark('b-pkg','Package name must look like com.example.app (lowercase).');
+  if(!/^\d+$/.test(String(c.vcode))||+c.vcode<1)mark('b-vc','Version code must be a whole number from 1.');
+  let proj=null;
+  if(c.source==='url'){try{const x=new URL(c.url);if(!/^https?:$/.test(x.protocol))throw 0}catch(e){mark('b-url','Enter a full website address starting with https://')}}
+  else if(c.source==='project'){proj=db.projects.find(p=>p.id===c.projectId);if(!proj)mark('b-proj','Select a project to build.');else if(web&&proj.type!=='webview'&&!proj.files['index.html'])mark('b-proj','This project has no index.html.')}
+  else if(!S.zip)mark('b-zip','Choose the ZIP file for your native project.');
+  if(bad.length){toast(bad[0],'err');const f=$('.input.bad');if(f)f.scrollIntoView({block:'center',behavior:'smooth'});return}
+  if(!u){gate('build','Create a free account to build your APK');return}
+  if(u.status==='banned'){toast('This account is suspended.','err');return}
+  if(db.settings.maintenance&&u.role!=='admin'){toast('Builds are paused for maintenance. Try again soon.','err');return}
+  if(u.plan==='free'&&u.role!=='admin'){const today=new Date().setHours(0,0,0,0),n=db.builds.filter(b=>b.uid===u.id&&b.at>=today).length;if(n>=db.settings.freeBuilds){toast('Daily limit reached ('+db.settings.freeBuilds+' builds). Upgrade for unlimited builds.','err');return}}
+  S.build={id:uid(),cfg:JSON.parse(JSON.stringify(Object.assign({},c,{icon:c.icon?'set':'',splash:c.splash?'set':''}))),icon:c.icon,files:proj?proj.files:null,zip:S.zip,state:'new',step:0,logs:[],t0:0,cancelled:false,size:0};
+  go('console');
+}
+function consoleView(){
+  return '<div class="phead"><div class="pico">'+ic('terminal',22)+'</div><div><h1>Build Console</h1><p>Live status, logs and output for your APK build</p></div></div><div class="cons" id="cons"></div>';
+}
+function paintConsole(){
+  const el=$('#cons'),b=S.build;if(!el||!b)return;
+  const steps=['Connect','Configure','Package','Sign','Done'],fail=b.state==='failed',done=b.state==='done',run=b.state==='run';
+  const secs=Math.floor(((b.t1||now())-b.t0)/1000),tm=String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0');
+  const title=fail?'Build failed':done?'APK built successfully':'Building “'+esc(b.cfg.name)+'”…';
+  const sub=fail?esc(b.err||'The build stopped. Check the log below.'):done?'Your app is ready to download.':'This usually takes a few minutes — feel free to stay on this page.';
+  const logs=b.logs.map(l=>'<div class="'+(l[2]||'')+'"><span>'+fmtTime(l[0])+'</span>'+esc(l[1])+'</div>').join('');
+  const keep=$('.tlog',el);const wasBottom=!keep||keep.scrollHeight-keep.scrollTop-keep.clientHeight<40;
+  el.innerHTML='<div class="cstat '+(fail?'fail':'')+'"><div class="chead">'+(run?'<div class="spin"></div>':'<div class="pico" style="background:rgba(255,255,255,.2);color:#fff">'+ic(fail?'x':'check',22)+'</div>')+'<div><h2>'+title+'</h2><p>'+sub+'</p></div></div><span class="tm" id="tm">'+ic('clock',12)+' '+tm+'</span>'+(run?'<span class="live">● LIVE</span>':'')
+   +'<div class="track">'+steps.map((s,i)=>'<div class="tn '+(i<b.step||done?'done':i===b.step&&run?'now':'')+'"><i>'+(i<b.step||done?ic('check',13):'')+'</i>'+s+'</div>').join('')+'</div></div>'
+   +(!b.api&&!fail?'<div class="banner demo-note">'+ic('info',18)+'<span><b>Demo build.</b> No build server is connected, so this run produces a project package, not an installable APK. An admin connects a server in Admin → Settings.</span></div>':'')
+   +'<div class="term"><header><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span>build output</span><button data-a="copylog">Copy</button></header><div class="tlog" id="tlog">'+logs+'</div></div>'
+   +(run?'<button class="btn btn-block" data-a="cancelbuild">Cancel Build</button>':'<div class="row2">'+(done?'<button class="btn btn-primary" data-a="showdone">'+ic('download',16)+' Download</button>':'<button class="btn btn-primary" data-a="go" data-r="build">Back to settings</button>')+'<button class="btn" data-a="go" data-r="projects">My Projects</button></div>');
+  const tl=$('#tlog');if(tl&&wasBottom)tl.scrollTop=tl.scrollHeight;
+}
+async function runBuild(b){
+  b.state='run';b.t0=now();paintConsole();
+  const tick=setInterval(()=>{if(b.state!=='run'||!$('#tm')){if(b.state!=='run')clearInterval(tick);return}const s=Math.floor((now()-b.t0)/1000);$('#tm').innerHTML=ic('clock',12)+' '+String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},1000);
+  const log=(m,cls)=>{b.logs.push([now(),m,cls||'']);paintConsole()};
+  try{
+    if(db.settings.buildApi){b.api=true;await remoteBuild(b,log)}
+    else{throw new Error('No real APK build server is connected. Export your project ZIP, or configure Admin → Settings → Build server endpoint. This app will not label a ZIP as an installable APK.')}
+    if(b.cancelled)return;
+    b.step=4;b.state='done';b.t1=now();
+    db.builds.push({id:b.id,uid:S.uid,name:b.cfg.name,pkg:b.cfg.pkg,ver:b.cfg.vname,size:b.size,status:'success',at:now(),mode:b.api?'server':'demo'});
+    addLog('Build finished: '+b.cfg.name+' ('+b.cfg.pkg+')');save();paintConsole();
+    if(b.cfg.webhook&&b.api){try{fetch(b.cfg.webhook,{method:'POST',body:JSON.stringify({app:b.cfg.name,pkg:b.cfg.pkg,status:'success'})})}catch(e){}}
+    showDone();confetti();
+  }catch(err){
+    if(b.cancelled)return;
+    b.state='failed';b.t1=now();b.err=err&&err.message?err.message:'Unknown error';log('ERROR: '+b.err,'e');
+    db.builds.push({id:b.id,uid:S.uid,name:b.cfg.name,pkg:b.cfg.pkg,ver:b.cfg.vname,size:0,status:'failed',at:now(),mode:b.api?'server':'demo'});save();paintConsole();
+  }finally{if(b.state!=='run')clearInterval(tick)}
+}
+function estSizeFor(b){let mb=8.4;if(b.files)mb+=bytesOf(b.files)/1048576;if(b.zip)mb+=b.zip.size/1048576;if(b.icon)mb+=.1;if(b.cfg.encrypt)mb+=.4;if(b.cfg.ads)mb+=1.8;if(b.cfg.push)mb+=1.2;return mb}
+async function remoteBuild(b,log){
+  const api=db.settings.buildApi.replace(/\/$/,'');
+  log('Contacting build server…');
+  const fd=new FormData();
+  fd.append('config',JSON.stringify(Object.assign({},b.cfg,{icon:b.icon||'',manifest:genManifest(b.cfg)})));
+  if(b.files&&needZip())fd.append('source',await zipOf(b.files),'source.zip');else if(b.zip)fd.append('source',b.zip,b.zip.name);
+  let r;try{r=await fetch(api,{method:'POST',body:fd})}catch(e){throw new Error('Cannot reach the build server. Check the endpoint in Admin → Settings.')}
+  if(!r.ok)throw new Error('Build server answered '+r.status+'.');
+  const {id}=await r.json();let seen=0;
+  for(let i=0;i<300;i++){
+    if(b.cancelled)return;await sleep(2000);
+    const s=await (await fetch(api+'/status/'+encodeURIComponent(id))).json();
+    (s.logs||[]).slice(seen).forEach(l=>log(l));seen=(s.logs||[]).length;
+    const map={queued:0,connect:0,configure:1,package:2,sign:3,done:4};b.step=map[s.step]!=null?map[s.step]:b.step;
+    if(s.state==='failed')throw new Error(s.error||'The build server reported a failure.');
+    if(s.state==='done'){b.url=s.downloadUrl;b.size=s.size||0;return}
+  }
+  throw new Error('The build timed out.');
+}
+function showDone(){
+  const b=S.build;if(!b)return;
+  modal('<div class="dm-top"><div class="pico">'+ic('download',26)+'</div><small>BUILD SUCCESSFUL</small><h2>'+esc(b.cfg.name)+'</h2></div><div class="dm-body"><div><div class="kv"><span>Package</span><b>'+esc(b.cfg.pkg)+'</b></div><div class="kv"><span>Version</span><b>'+esc(b.cfg.vname)+' ('+esc(b.cfg.vcode)+')</b></div><div class="kv"><span>Size</span><b>'+b.size+' MB</b></div><div class="kv"><span>Signature</span><b style="color:'+(b.api?'var(--good)':'var(--warn)')+'">'+(b.api?'✓ V1+V2 Signed':'Demo package, unsigned')+'</b></div></div>'
+   +'<button class="btn btn-primary btn-lg btn-block" data-a="dlbuild">'+ic('download',18)+' '+(b.api?'Download APK':'Download package')+'</button>'
+   +'<div class="row2"><button class="btn" data-a="again">Build Another</button><button class="btn" data-a="mine">My Projects</button></div></div>','done-modal');
+}
+async function downloadBuild(){
+  const b=S.build;if(!b)return;
+  if(b.url){const a=document.createElement('a');a.href=new URL(b.url,db.settings.buildApi).href;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();return}
+  if(!needZip())return;
+  const files={};
+  if(b.files)for(const n in b.files)files['app/assets/www/'+n]=b.files[n];
+  const extra={'AndroidManifest.xml':genManifest(b.cfg),'build-config.json':JSON.stringify(Object.assign({},b.cfg,{source:b.cfg.source==='url'?b.cfg.url:b.cfg.source}),null,2),'README.txt':'Demo build package for '+b.cfg.name+'\nThis is the project and manifest the builder prepared. It is not an installable APK.\nConnect a build server in Admin > Settings to produce signed APK files.\n'};
+  if(b.icon)files['app/res/icon.png']=b.icon;
+  try{saveBlob(await zipOf(files,extra),b.cfg.pkg+'-'+b.cfg.vname+'-package.zip');toast('Download started','ok')}catch(e){toast('Could not create the package.','err')}
+}
+function confetti(){
+  const cv=$('#fx');if(!cv||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const c=cv.getContext('2d');cv.width=innerWidth;cv.height=innerHeight;
+  const cols=['#2F4BFF','#FF5A36','#14B86B','#F5C857','#8EA2FF'];
+  const ps=Array.from({length:90},()=>({x:innerWidth/2+(Math.random()-.5)*120,y:innerHeight*.45,vx:(Math.random()-.5)*10,vy:-Math.random()*11-3,r:Math.random()*6+3,c:cols[Math.floor(Math.random()*5)],a:Math.random()*6}));
+  let f=0;(function step(){c.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.3;p.a+=.2;c.fillStyle=p.c;c.save();c.translate(p.x,p.y);c.rotate(p.a);c.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6);c.restore()});if(++f<110)requestAnimationFrame(step);else c.clearRect(0,0,cv.width,cv.height)})();
+}
+
+/* ---------- lab & converter ---------- */
+function labView(){
+  const tool=(i,t,d,a,l)=>'<div class="tool"><div class="pico">'+ic(i,22)+'</div><h3>'+t+'</h3><p>'+d+'</p><button class="btn btn-sm" data-a="'+a+'">'+l+'</button></div>';
+  return '<div class="phead"><div class="pico">'+ic('flask',22)+'</div><div><h1>Lab</h1><p>Small tools that make building apps easier.</p></div></div><div class="tools">'
+   +tool('phone','Icon Maker','Create a 512×512 app icon from letters or an image and send it straight to the build form.','iconmaker','Open Icon Maker')
+   +tool('file','Manifest Preview','See the AndroidManifest.xml your current build settings will generate.','manifest','Preview manifest')
+   +tool('lock','Secure Converter','Minify HTML and JavaScript, strip console calls and wrap the page in an obfuscated loader.','gocv','Open converter')
+   +tool('layers','Package Name Helper','Turn an app name into a valid Android package name.','pkghelp','Open helper')+'</div>';
+}
+function drawIcon(){
+  const cv=$('#imc');if(!cv)return;const c=cv.getContext('2d'),s=512,im=S.im;c.clearRect(0,0,s,s);c.save();
+  const r=im.shape==='circle'?s/2:im.shape==='square'?0:s*.22;c.beginPath();c.roundRect?c.roundRect(0,0,s,s,r):c.rect(0,0,s,s);c.clip();
+  const g=c.createLinearGradient(0,0,s,s);g.addColorStop(0,im.c1);g.addColorStop(1,im.c2);c.fillStyle=g;c.fillRect(0,0,s,s);
+  if(im.img){const k=Math.max(s/im.img.width,s/im.img.height);c.drawImage(im.img,(s-im.img.width*k)/2,(s-im.img.height*k)/2,im.img.width*k,im.img.height*k)}
+  else{c.fillStyle='#fff';c.font='700 '+(im.t.length>1?220:300)+'px Unbounded, system-ui, sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(im.t,s/2,s/2+8)}
+  c.restore();
+}
+function converterView(){
+  return '<div class="phead"><div class="pico">'+ic('lock',22)+'</div><div><h1>Secure Converter</h1><p>Shrink and obfuscate web code before you build.</p></div></div>'
+   +'<div class="twocol"><div class="card bform"><div class="field"><label for="cv-in">Paste HTML, CSS or JavaScript</label><textarea class="input" id="cv-in" style="min-height:240px;font-family:var(--f-mono);font-size:12px" placeholder="&lt;!doctype html&gt;…"></textarea></div>'
+   +'<div class="tgs"><label class="tg on" for="cv-min"><span><b>Minify</b><small>Remove comments and spacing</small></span><input type="checkbox" id="cv-min" checked><span class="sw"></span></label><label class="tg" for="cv-con"><span><b>Strip console</b><small>Remove console.log calls</small></span><input type="checkbox" id="cv-con"><span class="sw"></span></label><label class="tg" for="cv-wrap"><span><b>Wrap in loader</b><small>Base64 obfuscation</small></span><input type="checkbox" id="cv-wrap"><span class="sw"></span></label></div>'
+   +'<button class="btn btn-primary" data-a="convert">'+ic('zap',16)+' Convert</button></div>'
+   +'<div class="card bform"><div class="field"><label for="cv-out">Result</label><textarea class="input" id="cv-out" readonly style="min-height:240px;font-family:var(--f-mono);font-size:12px"></textarea></div><div id="cv-stat" class="hint">Output appears here.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-a="cvcopy">'+ic('copy',16)+' Copy</button><button class="btn" data-a="cvuse">Save as project</button></div><p class="hint">The loader hides code from casual viewing. It is obfuscation, not encryption, so do not put secrets in client code.</p></div></div>';
+}
+function convertCode(src,o){
+  let s=src;
+  if(o.con)s=s.replace(/console\.(log|info|debug|warn)\s*\([^;\n]*\)\s*;?/g,'');
+  if(o.min){
+    s=s.replace(/<!--[\s\S]*?-->/g,'').replace(/\/\*[\s\S]*?\*\//g,'').split('\n').filter(l=>!/^\s*\/\//.test(l)).map(l=>l.trim()).filter(Boolean).join('\n').replace(/>\s+</g,'><').replace(/[ \t]{2,}/g,' ');
+  }
+  if(o.wrap)s='<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>document.open();document.write(decodeURIComponent(escape(atob("'+btoa(unescape(encodeURIComponent(s)))+'"))));document.close()<\/script>';
+  return s;
+}
+
+/* ---------- admin ---------- */
+const ADM=[['overview','chart','Overview'],['users','users','Users'],['projects','folder','Projects'],['builds','pkg','Builds'],['store','grid','Store'],['payments','receipt','Payments'],['settings','sliders','Settings'],['activity','clock','Activity']];
+function barChart(days){
+  const W=440,H=176,L=30,B=24,T=12,max=Math.max(1,...days.map(d=>d.ok+d.fail)),top=Math.ceil(max/4)*4,bw=(W-L-8)/days.length,ph=H-B-T;
+  let g='';for(let i=0;i<=4;i++){const y=T+ph-ph*i/4;g+='<line class="gl" x1="'+L+'" x2="'+(W-4)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+3)+'" text-anchor="end">'+(top*i/4)+'</text>'}
+  const bars=days.map((d,i)=>{const x=L+i*bw+bw*.18,w=bw*.64,hs=ph*d.ok/top,hf=ph*d.fail/top,y0=T+ph;return '<rect class="bar" x="'+x+'" y="'+(y0-hs)+'" width="'+w+'" height="'+hs+'" rx="4"/>'+(d.fail?'<rect class="bar f" x="'+x+'" y="'+(y0-hs-hf)+'" width="'+w+'" height="'+hf+'" rx="4"/>':'')+'<text x="'+(x+w/2)+'" y="'+(H-8)+'" text-anchor="middle">'+d.l+'</text>'+((d.ok+d.fail)?'<text x="'+(x+w/2)+'" y="'+(y0-hs-hf-4)+'" text-anchor="middle" style="fill:var(--ink);font-weight:600">'+(d.ok+d.fail)+'</text>':'')}).join('');
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Builds per day, last 7 days">'+g+bars+'</svg>';
+}
+function adminView(){
+  const pend=db.payments.filter(p=>p.status==='pending').length;
+  return '<div class="phead"><div class="pico" style="background:color-mix(in srgb,var(--signal) 14%,var(--surface));color:var(--signal)">'+ic('shield',22)+'</div><div><h1>Admin Panel</h1><p>Users, builds, store, payments and site settings.</p></div></div>'
+   +'<div class="atabs" role="tablist">'+ADM.map(t=>'<button class="'+(S.adminTab===t[0]?'on':'')+'" data-a="atab" data-v="'+t[0]+'">'+ic(t[1],15)+t[2]+(t[0]==='payments'&&pend?' <span class="badge warn" style="height:18px">'+pend+'</span>':'')+'</button>').join('')+'</div><div id="atab">'+adminTab()+'</div>';
+}
+function adminTab(){
+  const t=S.adminTab,st=db.settings;
+  if(t==='overview'){
+    const rev=db.payments.filter(p=>p.type==='plan'&&p.status==='approved').reduce((s,p)=>s+p.amount,0),ok=db.builds.filter(b=>b.status==='success').length,pend=db.payments.filter(p=>p.status==='pending');
+    const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(6-i));const a=d.getTime();const bs=db.builds.filter(b=>b.at>=a&&b.at<a+DAY);return {l:d.toLocaleDateString('en-GB',{weekday:'short'}),ok:bs.filter(b=>b.status==='success').length,fail:bs.filter(b=>b.status==='failed').length}});
+    const pc={free:0,pro:0,studio:0};db.users.forEach(u=>pc[u.plan]=(pc[u.plan]||0)+1);const tot=Math.max(1,db.users.length);
+    return '<div class="stats" style="margin:0 0 16px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">'
+     +[['users','a',db.users.length,'Users'],['folder','s',db.projects.length,'Projects'],['pkg','g',db.builds.length,'Builds'],['check','g',db.builds.length?Math.round(ok/db.builds.length*100)+'%':'—','Success rate'],['wallet','w',taka(rev),'Plan revenue'],['receipt','s',pend.length,'Pending top-ups']].map(s=>'<div class="stat"><div class="si '+s[1]+'">'+ic(s[0],22)+'</div><div><b>'+s[2]+'</b><small>'+s[3]+'</small></div></div>').join('')+'</div>'
+     +'<div class="twocol"><div class="card"><h3 style="margin-bottom:4px">Builds, last 7 days</h3><small>Blue succeeded, red failed</small><div style="margin-top:10px">'+barChart(days)+'</div></div>'
+     +'<div class="card"><h3 style="margin-bottom:12px">Users by plan</h3>'+['free','pro','studio'].map(k=>'<div class="hbar"><span><b style="text-transform:capitalize">'+k+'</b><b>'+pc[k]+'</b></span><div><i style="width:'+Math.round(pc[k]/tot*100)+'%"></i></div></div>').join('')
+     +'<h3 style="margin:18px 0 10px">Latest signups</h3>'+db.users.slice().sort((a,b)=>b.created-a.created).slice(0,4).map(u=>'<div class="bitem" style="border:0;padding:6px 0"><span class="av" style="width:32px;height:32px;font-size:11px">'+esc(initials(u.name))+'</span><div class="grow"><b>'+esc(u.name)+'</b><small>'+esc(u.email)+'</small></div><small>'+ago(u.created)+'</small></div>').join('')+'</div></div>';
+  }
+  if(t==='users')return '<div class="search" style="max-width:none;margin-bottom:12px">'+ic('search',16)+'<input id="uq" type="search" data-in="uq" placeholder="Search users by name or email" value="'+esc(S.uq)+'" aria-label="Search users"></div><div id="utable">'+usersTable()+'</div>';
+  if(t==='projects')return db.projects.length?'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Project</th><th>Owner</th><th>Type</th><th>Files</th><th>Updated</th><th></th></tr></thead><tbody>'+db.projects.slice().sort((a,b)=>b.updated-a.updated).map(p=>'<tr><td><b>'+esc(p.name)+'</b><br><small class="mono">'+esc(p.pkg)+'</small></td><td>'+esc(userName(p.owner))+'</td><td><span class="badge info">'+typeLabel(p.type)+'</span></td><td>'+Object.keys(p.files).length+'</td><td>'+ago(p.updated)+'</td><td class="act"><button class="btn btn-sm" data-a="edit" data-id="'+p.id+'">Open</button><button class="btn btn-sm btn-danger" data-a="admpdel" data-id="'+p.id+'">Delete</button></td></tr>').join('')+'</tbody></table></div>'
+    :'<div class="empty">'+ic('folder',28)+'<h3>No projects yet</h3><p>Projects created by users appear here.</p></div>';
+  if(t==='builds')return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><small>'+db.builds.length+' builds recorded</small><button class="btn btn-sm btn-danger" data-a="bclear">Clear history</button></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>App</th><th>User</th><th>Version</th><th>Size</th><th>Mode</th><th>When</th><th>Status</th></tr></thead><tbody>'+db.builds.slice().sort((a,b)=>b.at-a.at).slice(0,80).map(b=>'<tr><td><b>'+esc(b.name)+'</b><br><small class="mono">'+esc(b.pkg)+'</small></td><td>'+esc(userName(b.uid))+'</td><td>'+esc(b.ver)+'</td><td>'+(b.size?b.size+' MB':'—')+'</td><td>'+esc(b.mode||'demo')+'</td><td>'+ago(b.at)+'</td><td><span class="badge '+(b.status==='success'?'good':'bad')+'">'+b.status+'</span></td></tr>').join('')+'</tbody></table></div>';
+  if(t==='store')return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap"><small>'+allTemplates().length+' templates visible</small><button class="btn btn-sm btn-primary" data-a="tpladd">'+ic('plus',14)+' Add from project</button></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Template</th><th>Category</th><th>Source</th><th>Visibility</th><th></th></tr></thead><tbody>'
+    +TPL.map(x=>{const h=db.hidden.includes(x.id);return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.cat)+'</td><td>Built-in</td><td><span class="badge '+(h?'':'good')+'">'+(h?'Hidden':'Visible')+'</span></td><td class="act"><button class="btn btn-sm" data-a="tplhide" data-id="'+x.id+'">'+(h?'Show':'Hide')+'</button></td></tr>'}).join('')
+    +db.templates.map(x=>'<tr><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.cat)+'</td><td>Custom</td><td><span class="badge good">Visible</span></td><td class="act"><button class="btn btn-sm btn-danger" data-a="tpldel" data-id="'+x.id+'">Delete</button></td></tr>').join('')+'</tbody></table></div>';
+  if(t==='payments'){const l=db.payments.slice().sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1)||b.at-a.at);return payTable(l,true)}
+  if(t==='settings')return '<form data-f="settings" class="bform" novalidate><div class="twocol"><div class="card bform"><h3>General</h3>'
+    +'<div class="field"><label for="s-site">Site name</label><input class="input" id="s-site" value="'+esc(st.site)+'" maxlength="30"></div>'
+    +'<div class="field"><label for="s-ann">Announcement banner</label><textarea class="input" id="s-ann" maxlength="200">'+esc(st.announce)+'</textarea></div>'
+    +'<div class="tgs"><label class="tg '+(st.announceOn?'on':'')+'" for="s-annon"><span><b>Show banner</b><small>On the dashboard</small></span><input type="checkbox" id="s-annon"'+(st.announceOn?' checked':'')+'><span class="sw"></span></label>'
+    +'<label class="tg '+(st.maintenance?'on':'')+'" for="s-maint"><span><b>Maintenance</b><small>Pause all builds</small></span><input type="checkbox" id="s-maint"'+(st.maintenance?' checked':'')+'><span class="sw"></span></label>'
+    +'<label class="tg '+(st.signup?'on':'')+'" for="s-signup"><span><b>Open signups</b><small>Allow new accounts</small></span><input type="checkbox" id="s-signup"'+(st.signup?' checked':'')+'><span class="sw"></span></label></div></div>'
+    +'<div class="card bform"><h3>Builds &amp; billing</h3><div class="row2"><div class="field"><label for="s-free">Free builds per day</label><input class="input" id="s-free" type="number" min="0" value="'+st.freeBuilds+'"></div><div class="field"><label for="s-speed">Demo build speed ×</label><input class="input" id="s-speed" type="number" min=".2" max="5" step=".1" value="'+st.speed+'"></div></div>'
+    +'<div class="row2"><div class="field"><label for="s-pro">Pro price (৳/mo)</label><input class="input" id="s-pro" type="number" min="0" value="'+st.plans.pro.price+'"></div><div class="field"><label for="s-studio">Studio price (৳/mo)</label><input class="input" id="s-studio" type="number" min="0" value="'+st.plans.studio.price+'"></div></div>'
+    +'<div class="field"><label for="s-pay">Payment instructions</label><textarea class="input" id="s-pay" maxlength="300">'+esc(st.payInfo)+'</textarea></div>'
+    +'<div class="field"><label for="s-api">Build server endpoint</label><input class="input" id="s-api" type="url" value="'+esc(st.buildApi)+'" placeholder="https://builder.example.com/api/build"><span class="hint">Leave empty for demo builds. With a server set, the site POSTs multipart <code>config</code> (JSON) and <code>source</code> (ZIP), then polls <code>GET {endpoint}/status/{id}</code> for <code>{state, step, logs, downloadUrl, size}</code>.</span></div></div></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary">Save settings</button><button type="button" class="btn" data-a="export">'+ic('download',16)+' Export data</button><button type="button" class="btn btn-danger" data-a="reset">Reset demo data</button></div></form>';
+  return '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>When</th><th>Event</th></tr></thead><tbody>'+db.log.slice(0,100).map(l=>'<tr><td style="white-space:nowrap">'+ago(l.at)+'</td><td>'+esc(l.t)+'</td></tr>').join('')+'</tbody></table></div>';
+}
+function usersTable(){
+  const q=S.uq.trim().toLowerCase(),l=db.users.filter(u=>!q||(u.name+' '+u.email).toLowerCase().includes(q));
+  if(!l.length)return '<div class="empty">'+ic('users',28)+'<h3>No users match</h3></div>';
+  return '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>User</th><th>Plan</th><th>Wallet</th><th>Builds</th><th>Status</th><th>Joined</th><th></th></tr></thead><tbody>'+l.map(u=>'<tr><td><b>'+esc(u.name)+(u.role==='admin'?' <span class="badge info">ADMIN</span>':'')+'</b><br><small>'+esc(u.email)+'</small></td><td style="text-transform:capitalize">'+u.plan+'</td><td>'+taka(u.wallet)+'</td><td>'+db.builds.filter(b=>b.uid===u.id).length+'</td><td><span class="badge '+(u.status==='active'?'good':'bad')+'">'+u.status+'</span></td><td>'+fmtDate(u.created)+'</td><td class="act"><button class="btn btn-sm" data-a="uedit" data-id="'+u.id+'">Edit</button>'+(u.id!=='admin'&&u.id!==S.uid?'<button class="btn btn-sm" data-a="uban" data-id="'+u.id+'">'+(u.status==='active'?'Ban':'Unban')+'</button><button class="btn btn-sm btn-danger" data-a="udel" data-id="'+u.id+'" aria-label="Delete user">'+ic('trash',13)+'</button>':'')+'</td></tr>').join('')+'</tbody></table></div>';
+}
+function meter(v){
+  let s=0;if(v.length>=8)s++;if(/[a-z]/.test(v)&&/[A-Z]/.test(v))s++;if(/\d/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;
+  const m=$('#meter');if(!m)return;m.dataset.s=s;[...m.children].forEach((x,i)=>x.classList.toggle('on',i<s&&v.length>0));
+  $('#meterlbl').textContent=!v?'Use 8+ characters with letters, numbers and a symbol.':['Too weak','Weak','Okay','Strong','Very strong'][s];
+}
+
+/* ---------- actions ---------- */
+const A={
+  close:()=>closeModal(),
+  confirmyes:()=>{const f=S.cb;S.cb=null;closeModal();f&&f()},
+  go:el=>go(el.dataset.r),
+  drawer:()=>{$('#side').classList.toggle('open');$('#scrim').classList.toggle('open')},
+  theme:()=>{const eff=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),n=eff==='dark'?'light':'dark';document.documentElement.dataset.theme=n;store.set(TKEY,n);render()},
+  logout:(el,e)=>{e.preventDefault();addLog('Signed out');setSession(null);S.cur=null;toast('Signed out');go('home')},
+  showpw:el=>{const i=$('input',el.parentNode);i.type=i.type==='password'?'text':'password'},
+  authtab:el=>{S.authTab=el.dataset.v;render()},
+  newp:()=>openNewProject(),
+  import:()=>$('#zipin').click(),
+  edit:el=>openProject(el.dataset.id),
+  pbuild:el=>{const p=db.projects.find(x=>x.id===el.dataset.id);if(!p)return;ebuildFor(p)},
+  pdel:el=>{const p=db.projects.find(x=>x.id===el.dataset.id);if(p)confirmBox('Delete “'+p.name+'”?','This removes the project and all its files. This cannot be undone.',()=>{db.projects=db.projects.filter(x=>x.id!==p.id);if(S.cur===p.id)S.cur=null;addLog('Deleted project '+p.name);save();toast('Project deleted');render()})},
+  admpdel:el=>A.pdel(el),
+  ptype:el=>{S.ptype=el.dataset.v;render()},
+  cat:el=>{S.cat=el.dataset.v;render()},
+  tplprev:el=>{
+    const t=allTemplates().find(x=>x.id===el.dataset.id);if(!t)return;const files=tplFiles(t),web=!t.native&&!t.web;
+    const m=modal(mhead(esc(t.name))+(web?'<iframe id="tpf" title="Template preview" sandbox="allow-scripts allow-forms allow-modals" style="width:100%;height:min(500px,58vh);border:0;border-radius:16px;background:#fff"></iframe>':'<pre class="tree">'+Object.keys(files).sort().map(n=>'├─ '+esc(n)).join('\n')+'</pre>')+'<div style="margin-top:14px"><button class="btn btn-primary btn-block" data-a="tpluse" data-id="'+t.id+'">Use this template</button></div>','wide');
+    if(web)$('#tpf',m).srcdoc=previewDoc(files);
+  },
+  tpluse:el=>{const t=allTemplates().find(x=>x.id===el.dataset.id);if(!t)return;closeModal();const p=newProjectObj({name:t.name,type:t.native?'native':t.web?'webview':(t.type||'html'),files:tplFiles(t)});addLog('Created project from template '+t.name);toast('Template added to your projects','ok');openProject(p.id)},
+  buyplan:el=>{
+    const u=me();if(!u){gate('plans','Sign in to choose a plan');return}
+    const k=el.dataset.p,price=db.settings.plans[k].price;
+    confirmBox('Switch to '+k[0].toUpperCase()+k.slice(1)+'?',taka(price)+' will be taken from your wallet ('+taka(u.wallet)+' available) for 30 days.',()=>{
+      if(u.wallet<price){toast('Not enough balance. Add money first.','err');go('wallet');return}
+      u.wallet-=price;u.plan=k;u.exp=Math.max(u.exp||0,now())+30*DAY;
+      db.payments.push({id:uid(),uid:u.id,type:'plan',plan:k,amount:price,method:'wallet',status:'approved',at:now(),trx:'W'+Math.random().toString(36).slice(2,8).toUpperCase()});
+      addLog(u.email+' bought '+k+' plan');save();toast('You are on '+k+' now','ok');render();
+    },'Pay '+taka(price));
+  },
+  delacct:()=>confirmBox('Delete your account?','Your profile, projects and build history will be removed.',()=>{const u=me();db.projects=db.projects.filter(p=>p.owner!==u.id);db.builds=db.builds.filter(b=>b.uid!==u.id);db.payments=db.payments.filter(p=>p.uid!==u.id);db.users=db.users.filter(x=>x.id!==u.id);addLog('Account deleted: '+u.email);save();setSession(null);toast('Account deleted');go('home')},'Delete account'),
+  // editor
+  files:()=>{S.filesOpen=!S.filesOpen;$('#edshell').classList.toggle('f',S.filesOpen)},
+  pane:el=>{S.pane=el.dataset.v;$('#edshell').dataset.pane=S.pane;$$('.paneseg .seg button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.pane));if(S.pane==='prev')refreshPreview()},
+  save:()=>{commitSave();toast('Saved','ok')},
+  run:()=>{if(innerWidth<1100){S.pane='prev';$('#edshell').dataset.pane='prev';$$('.paneseg .seg button').forEach(b=>b.classList.toggle('on',b.dataset.v==='prev'))}refreshPreview()},
+  live:()=>{S.live=!S.live;$('#livebtn').textContent=S.live?'Live: on':'Live: off'},
+  pdev:()=>{S.dev=!S.dev;$('#pvstage').classList.toggle('dev',S.dev)},
+  pcons:()=>{S.cons=!S.cons;$('#pcons').hidden=!S.cons},
+  openfile:(el,e)=>{if(e.target.closest('[data-a="renfile"],[data-a="delfile"],[data-a="closetab"]'))return;S.tab=el.dataset.n;swapFile();S.filesOpen=false;$('#edshell').classList.remove('f')},
+  closetab:(el,e)=>{e.stopPropagation();const n=el.dataset.n;S.open=S.open.filter(x=>x!==n);if(S.tab===n){S.tab=S.open[S.open.length-1]||Object.keys(curProject().files).sort(fsort)[0]}swapFile()},
+  newfile:()=>modal(mhead('New file')+'<form data-f="newfile" class="bform"><div class="field"><label for="nf-name">File name</label><input class="input" id="nf-name" placeholder="about.html" autocomplete="off" autocapitalize="off"></div><div class="err" id="nferr"></div><button class="btn btn-primary">Create file</button></form>'),
+  renfile:(el,e)=>{e.stopPropagation();S.ren=el.dataset.n;modal(mhead('Rename file')+'<form data-f="renfile" class="bform"><div class="field"><label for="rn-name">File name</label><input class="input" id="rn-name" value="'+esc(S.ren)+'" autocomplete="off" autocapitalize="off"></div><div class="err" id="nferr"></div><button class="btn btn-primary">Rename</button></form>')},
+  delfile:(el,e)=>{e.stopPropagation();const p=curProject(),n=el.dataset.n;if(Object.keys(p.files).length<2){toast('A project needs at least one file.','err');return}confirmBox('Delete '+n+'?','This file will be removed from the project.',()=>{delete p.files[n];S.open=S.open.filter(x=>x!==n);if(S.tab===n)S.tab=null;p.updated=now();save();render()})},
+  upfiles:()=>$('#filein').click(),
+  zipdl:async()=>{const p=curProject();if(!needZip())return;try{saveBlob(await zipOf(p.files),slug(p.name)+'.zip');toast('Download started','ok')}catch(e){toast('Could not create the ZIP.','err')}},
+  ebuild:()=>{ebuildFor(curProject())},
+  // build page
+  btab:el=>{S.cfg.tab=el.dataset.v;S.cfg.source=el.dataset.v==='web'?'url':'project';saveCfg();render()},
+  bsrc:el=>{S.cfg.source=el.dataset.v;saveCfg();render()},
+  dobuild:()=>startBuild(),
+  cancelbuild:()=>{const b=S.build;if(!b)return;b.cancelled=true;b.state='failed';b.err='Build cancelled.';b.t1=now();b.logs.push([now(),'Build cancelled by user.','e']);paintConsole()},
+  copylog:()=>{const t=S.build.logs.map(l=>fmtTime(l[0])+' '+l[1]).join('\n');navigator.clipboard&&navigator.clipboard.writeText(t).then(()=>toast('Log copied','ok'),()=>toast('Copy is not available here.','err'))},
+  showdone:()=>showDone(),
+  dlbuild:()=>downloadBuild(),
+  again:()=>{closeModal();go('build')},
+  mine:()=>{closeModal();go('projects')},
+  // lab
+  iconmaker:()=>{
+    S.im=S.im||{t:'AR',c1:'#2F4BFF',c2:'#1B2AB0',shape:'round',img:null};const im=S.im;
+    modal(mhead('Icon Maker')+'<div style="display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:start"><canvas id="imc" width="512" height="512" style="width:132px;height:132px;border-radius:20px;background:var(--surface2)"></canvas><div class="bform">'
+     +'<div class="field"><label for="im-t">Letters</label><input class="input" id="im-t" data-im="t" maxlength="2" value="'+esc(im.t)+'"></div>'
+     +'<div class="row2"><div class="field"><label for="im-c1">From</label><input class="input" id="im-c1" type="color" data-im="c1" value="'+im.c1+'" style="padding:4px"></div><div class="field"><label for="im-c2">To</label><input class="input" id="im-c2" type="color" data-im="c2" value="'+im.c2+'" style="padding:4px"></div></div></div></div>'
+     +'<div class="bform" style="margin-top:14px"><div class="row2"><div class="field"><label for="im-s">Shape</label><select class="input" id="im-s" data-im="shape"><option value="round">Rounded</option><option value="square">Square</option><option value="circle">Circle</option></select></div><div class="field"><label for="im-f">Or use an image</label><input class="input" id="im-f" type="file" accept="image/*" data-imf="1" style="padding-top:10px"></div></div>'
+     +'<button class="btn btn-primary btn-block" data-a="useicon">Use as app icon</button></div>');
+    $('#im-s').value=im.shape;drawIcon();
+  },
+  useicon:()=>{const cv=$('#imc');if(!cv)return;S.cfg.icon=cv.toDataURL('image/png');saveCfg();closeModal();toast('Icon set. Open Build APK to see it.','ok')},
+  manifest:()=>modal(mhead('AndroidManifest.xml')+'<pre class="pre">'+esc(genManifest(Object.assign({},S.cfg,{name:S.cfg.name||'My App',pkg:S.cfg.pkg||'com.myapp.name'})))+'</pre><p class="hint" style="margin-top:10px">Generated from your Build APK settings.</p>','wide'),
+  gocv:()=>go('converter'),
+  pkghelp:()=>modal(mhead('Package name helper')+'<div class="bform"><div class="field"><label for="ph-n">App name</label><input class="input" id="ph-n" data-ph="1" placeholder="Fit Track" autocomplete="off"></div><div class="field"><label for="ph-o">Result</label><input class="input mono" id="ph-o" readonly value="com.myapp.app"></div><button class="btn btn-primary" data-a="usepkg">Use in build form</button></div>'),
+  usepkg:()=>{const v=$('#ph-o').value;S.cfg.pkg=v;S.cfg.pkgTouched=true;saveCfg();closeModal();toast('Package name set','ok')},
+  convert:()=>{const v=$('#cv-in').value;if(!v.trim()){toast('Paste some code first.','err');return}const o=convertCode(v,{min:$('#cv-min').checked,con:$('#cv-con').checked,wrap:$('#cv-wrap').checked});$('#cv-out').value=o;const a=new Blob([v]).size,b=new Blob([o]).size;$('#cv-stat').textContent=a+' B → '+b+' B ('+(b<=a?'-':'+')+Math.abs(Math.round((1-b/a)*100))+'%)'},
+  cvcopy:()=>{const o=$('#cv-out');if(!o.value)return;o.select();(navigator.clipboard?navigator.clipboard.writeText(o.value):Promise.reject()).then(()=>toast('Copied','ok'),()=>{try{document.execCommand('copy');toast('Copied','ok')}catch(e){toast('Press and hold to copy.')}})},
+  cvuse:()=>{const o=$('#cv-out').value;if(!o){toast('Convert some code first.','err');return}const p=newProjectObj({name:'Converted page',type:'html',files:{'index.html':o}});toast('Saved as a project','ok');openProject(p.id)},
+  // admin
+  atab:el=>{S.adminTab=el.dataset.v;render()},
+  uedit:el=>{const u=db.users.find(x=>x.id===el.dataset.id);if(!u)return;S.eu=u.id;
+    modal(mhead('Edit user')+'<form data-f="useredit" class="bform" novalidate><div class="field"><label for="eu-name">Name</label><input class="input" id="eu-name" value="'+esc(u.name)+'"></div><div class="field"><label for="eu-email">Email</label><input class="input" id="eu-email" value="'+esc(u.email)+'" disabled></div>'
+     +'<div class="row2"><div class="field"><label for="eu-role">Role</label><select class="input" id="eu-role"><option value="user"'+(u.role==='user'?' selected':'')+'>User</option><option value="admin"'+(u.role==='admin'?' selected':'')+'>Admin</option></select></div><div class="field"><label for="eu-plan">Plan</label><select class="input" id="eu-plan">'+['free','pro','studio'].map(k=>'<option value="'+k+'"'+(u.plan===k?' selected':'')+'>'+k+'</option>').join('')+'</select></div></div>'
+     +'<div class="field"><label for="eu-w">Wallet balance (৳)</label><input class="input" id="eu-w" type="number" min="0" value="'+u.wallet+'"></div><button class="btn btn-primary">Save user</button></form>')},
+  uban:el=>{const u=db.users.find(x=>x.id===el.dataset.id);if(!u)return;u.status=u.status==='active'?'banned':'active';addLog((u.status==='banned'?'Banned ':'Unbanned ')+u.email);save();render()},
+  udel:el=>{const u=db.users.find(x=>x.id===el.dataset.id);if(u)confirmBox('Delete '+u.name+'?','Their projects, builds and payments are removed too.',()=>{db.projects=db.projects.filter(p=>p.owner!==u.id);db.builds=db.builds.filter(b=>b.uid!==u.id);db.payments=db.payments.filter(p=>p.uid!==u.id);db.users=db.users.filter(x=>x.id!==u.id);addLog('Deleted user '+u.email);save();render()})},
+  bclear:()=>confirmBox('Clear build history?','All recorded builds are removed from the log.',()=>{db.builds=[];addLog('Cleared build history');save();render()},'Clear'),
+  tplhide:el=>{const id=el.dataset.id;db.hidden=db.hidden.includes(id)?db.hidden.filter(x=>x!==id):db.hidden.concat(id);save();render()},
+  tpldel:el=>{db.templates=db.templates.filter(x=>x.id!==el.dataset.id);save();render()},
+  tpladd:()=>{
+    if(!db.projects.length){toast('Create a project first, then publish it as a template.','err');return}
+    modal(mhead('Add template')+'<form data-f="tpladd" class="bform" novalidate><div class="field"><label for="ta-p">Project</label><select class="input" id="ta-p">'+db.projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+' · '+esc(userName(p.owner))+'</option>').join('')+'</select></div><div class="row2"><div class="field"><label for="ta-n">Name</label><input class="input" id="ta-n" maxlength="30"></div><div class="field"><label for="ta-c">Category</label><select class="input" id="ta-c">'+['Tools','Games','Media','Business','Native'].map(c=>'<option>'+c+'</option>').join('')+'</select></div></div><div class="field"><label for="ta-d">Description</label><input class="input" id="ta-d" maxlength="80"></div><div class="err" id="taerr"></div><button class="btn btn-primary">Publish to store</button></form>');
+  },
+  payok:el=>{const p=db.payments.find(x=>x.id===el.dataset.id),u=p&&db.users.find(x=>x.id===p.uid);if(!p)return;p.status='approved';if(u&&p.type==='topup')u.wallet+=p.amount;addLog('Approved ৳'+p.amount+' top-up for '+(u?u.email:'?'));save();toast('Payment approved','ok');render()},
+  payno:el=>{const p=db.payments.find(x=>x.id===el.dataset.id);if(!p)return;p.status='rejected';addLog('Rejected payment '+p.trx);save();toast('Payment rejected');render()},
+  export:()=>{const d=JSON.parse(JSON.stringify(db));d.users.forEach(u=>u.pw='');saveBlob(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),'arapk-data.json');toast('Export started','ok')},
+  reset:()=>confirmBox('Reset all data?','Users, projects, builds and settings return to the sample data. Your admin session stays active.',async()=>{const keep=me();db=await seed();S.uid=keep?keep.id:null;if(!db.users.some(u=>u.id===S.uid))setSession(null);save();toast('Data reset','ok');render()},'Reset')
+};
+function ebuildFor(p){
+  if(!p)return;
+  const native=p.type==='native';S.cfg.tab=native?'native':'web';S.cfg.source='project';S.cfg.projectId=p.id;
+  if(!S.cfg.name){S.cfg.name=p.name;S.cfg.pkg=p.pkg;}
+  saveCfg();go('build');
+}
+function tplFiles(t){if(t.files)return JSON.parse(JSON.stringify(t.files));if(t.native)return nativeFiles(t.native,'com.example.'+slug(t.name));if(t.web)return STARTERS.webview(t.name,'https://example.com');return {}}
+
+/* ---------- forms ---------- */
+const F={
+  newp:f=>{
+    const name=$('#np-name').value.trim()||'My Awesome App',type=($('input[name="np-type"]:checked')||{}).value||'blank',err=m=>{$('#nperr').textContent=m};
+    let pkg=$('#np-pkg').value.trim().toLowerCase()||'com.'+slug(name)+'.app';
+    if(!validPkg(pkg))return err('Package name must look like com.example.app (lowercase letters and digits).');
+    let files,ptype=type;
+    if(type==='webview'){const u=$('#np-url').value.trim();if(u){try{if(!/^https?:$/.test(new URL(u).protocol))throw 0}catch(e){return err('Enter a full website address starting with https://')}}files=STARTERS.webview(name,u)}
+    else if(type==='native'){files=($('#np-lang').value==='java'?STARTERS.java:STARTERS.kotlin)(name,pkg)}
+    else if(type==='html')files=STARTERS.html(esc(name));
+    else files=STARTERS.blank();
+    closeModal();const p=newProjectObj({name,type:ptype,pkg,files});addLog('Created project '+name);toast('Project created','ok');openProject(p.id);
+  },
+  newfile:f=>{const p=curProject(),n=$('#nf-name').value.trim().replace(/^\/+/,'');if(!/^[\w\-./ ]+\.\w+$/.test(n))return $('#nferr').textContent='Use a name with an extension, like about.html.';if(n in p.files)return $('#nferr').textContent='A file with that name already exists.';p.files[n]='';p.updated=now();S.tab=n;save();closeModal();swapFile()},
+  renfile:f=>{const p=curProject(),n=$('#rn-name').value.trim();if(!/^[\w\-./ ]+\.\w+$/.test(n))return $('#nferr').textContent='Use a name with an extension.';if(n!==S.ren&&n in p.files)return $('#nferr').textContent='A file with that name already exists.';const o=S.ren;if(n!==o){p.files[n]=p.files[o];delete p.files[o];S.open=S.open.map(x=>x===o?n:x);if(S.tab===o)S.tab=n;p.updated=now();save()}closeModal();swapFile()},
+  login:async f=>{
+    const err=m=>{$('#aerr').textContent=m},email=$('#lg-email').value.trim().toLowerCase(),pw=$('#lg-pw').value;
+    if(now()<S.lockUntil)return err('Too many attempts. Wait '+Math.ceil((S.lockUntil-now())/1000)+' seconds.');
+    if(!validEmail(email))return err('Enter a valid email address.');if(!pw)return err('Enter your password.');
+    const u=db.users.find(x=>x.email===email),h=await hashPw(pw);
+    if(!u||u.pw!==h){if(++S.fails>=5){S.lockUntil=now()+30000;S.fails=0}return err('Email or password is incorrect.')}
+    if(u.status==='banned')return err('This account is suspended. Contact support.');
+    S.fails=0;addLog('Signed in: '+u.email);afterAuth(u);
+  },
+  register:async f=>{
+    const err=m=>{$('#aerr').textContent=m},name=$('#rg-name').value.trim(),email=$('#rg-email').value.trim().toLowerCase(),pw=$('#rg-pw').value;
+    if(!db.settings.signup)return err('Registration is closed right now.');
+    if(name.length<2)return err('Enter your full name.');if(!validEmail(email))return err('Enter a valid email address.');
+    if(pw.length<8||!/[A-Za-z]/.test(pw)||!/\d/.test(pw))return err('Password needs 8+ characters with letters and numbers.');
+    if(pw!==$('#rg-pw2').value)return err('The two passwords do not match.');
+    if(!$('#rg-terms').checked)return err('Accept the terms to continue.');
+    if(db.users.some(u=>u.email===email))return err('That email already has an account. Sign in instead.');
+    const u={id:uid(),name,email,pw:await hashPw(pw),role:'user',plan:'free',exp:0,wallet:0,created:now(),status:'active'};
+    db.users.push(u);addLog('New signup: '+email);afterAuth(u);
+  },
+  forgot:async f=>{
+    const err=m=>{$('#aerr').textContent=m},email=$('#fg-email').value.trim().toLowerCase(),pw=$('#fg-pw').value;
+    if(!validEmail(email))return err('Enter a valid email address.');if(pw.length<8)return err('New password needs at least 8 characters.');
+    const u=db.users.find(x=>x.email===email);if(u){u.pw=await hashPw(pw);addLog('Password reset: '+email);save()}
+    toast('If that account exists, the password is updated.','ok');S.authTab='login';render();
+  },
+  topup:f=>{
+    const err=m=>{$('#terr').textContent=m},amt=Math.round(+$('#tp-amt').value),trx=$('#tp-trx').value.trim().toUpperCase(),from=$('#tp-from').value.trim();
+    if(!(amt>=50))return err('Minimum amount is ৳50.');if(trx.length<6)return err('Enter the transaction ID from your payment message.');if(!/^01\d{9}$/.test(from))return err('Sender number must be 11 digits starting with 01.');
+    if(db.payments.some(p=>p.trx===trx))return err('That transaction ID was already submitted.');
+    db.payments.push({id:uid(),uid:S.uid,type:'topup',amount:amt,method:$('#tp-method').value,trx,from,status:'pending',at:now()});addLog(me().email+' requested ৳'+amt+' top-up');save();toast('Submitted. We will approve it after checking.','ok');render();
+  },
+  profile:f=>{const n=$('#pf-name').value.trim();if(n.length<2){toast('Enter your name.','err');return}me().name=n;save();toast('Profile saved','ok');render()},
+  chpw:async f=>{const err=m=>{$('#cperr').textContent=m},u=me();if(await hashPw($('#cp-old').value)!==u.pw)return err('Current password is incorrect.');const n=$('#cp-new').value;if(n.length<8||!/[A-Za-z]/.test(n)||!/\d/.test(n))return err('New password needs 8+ characters with letters and numbers.');u.pw=await hashPw(n);save();toast('Password updated','ok');render()},
+  useredit:f=>{const u=db.users.find(x=>x.id===S.eu);if(!u)return;u.name=$('#eu-name').value.trim()||u.name;u.role=$('#eu-role').value;const np=$('#eu-plan').value;if(np!==u.plan){u.plan=np;u.exp=np==='free'?0:now()+30*DAY}u.wallet=Math.max(0,Math.round(+$('#eu-w').value||0));addLog('Edited user '+u.email);save();closeModal();toast('User saved','ok');render()},
+  tpladd:f=>{const p=db.projects.find(x=>x.id===$('#ta-p').value),n=$('#ta-n').value.trim();if(!p)return;if(!n)return $('#taerr').textContent='Enter a template name.';const pal=[['#3B55FF','#16208F'],['#2FC17D','#0B6B47'],['#FF7A59','#C23412'],['#8B6BF2','#3E2BA8']][db.templates.length%4];db.templates.push({id:'c'+uid(),name:n,cat:$('#ta-c').value,desc:$('#ta-d').value.trim()||'Custom template',c1:pal[0],c2:pal[1],icon:'layers',type:p.type,files:JSON.parse(JSON.stringify(p.files))});addLog('Added template '+n);save();closeModal();toast('Template published','ok');render()},
+  settings:f=>{const s=db.settings;s.site=$('#s-site').value.trim()||'AR APK BUILD';s.announce=$('#s-ann').value.trim();s.announceOn=$('#s-annon').checked;s.maintenance=$('#s-maint').checked;s.signup=$('#s-signup').checked;s.freeBuilds=Math.max(0,Math.round(+$('#s-free').value||0));s.speed=Math.min(5,Math.max(.2,+$('#s-speed').value||1));s.plans.pro.price=Math.max(0,Math.round(+$('#s-pro').value||0));s.plans.studio.price=Math.max(0,Math.round(+$('#s-studio').value||0));s.payInfo=$('#s-pay').value.trim();s.buildApi=$('#s-api').value.trim();addLog('Settings updated');save();toast('Settings saved','ok');render()}
+};
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]');
+  if(el){const f=A[el.dataset.a];if(f)f(el,e)}
+  if(e.target.closest('[data-close]')){const s=$('#side');if(s){s.classList.remove('open');$('#scrim').classList.remove('open')}}
+});
+document.addEventListener('submit',e=>{const f=e.target.closest('[data-f]');if(!f)return;e.preventDefault();const h=F[f.dataset.f];if(h)h(f)});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.cfg!==undefined)return cfgSet(t);
+  if(t.dataset.in==='q'){S.q=t.value;return onSearch()}
+  if(t.dataset.in==='uq'){S.uq=t.value;const u=$('#utable');if(u)u.innerHTML=usersTable();return}
+  if(t.id==='rg-pw')meter(t.value);
+  if(t.dataset.im&&S.im){S.im[t.dataset.im]=t.value;drawIcon()}
+  if(t.dataset.ph){$('#ph-o').value='com.'+slug(t.value)+'.app'}
+});
+document.addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.dataset.cfg!==undefined&&(t.type==='checkbox'||t.tagName==='SELECT'||t.type==='color'))return cfgSet(t);
+  if(t.name==='np-type'){$('#np-urlf').hidden=t.value!=='webview';$('#np-langf').hidden=t.value!=='native'}
+  if(t.dataset.im&&S.im){S.im[t.dataset.im]=t.value;drawIcon()}
+  if(t.dataset.imf&&t.files[0]){const img=new Image(),u=URL.createObjectURL(t.files[0]);img.onload=()=>{S.im.img=img;drawIcon()};img.src=u}
+  if(t.dataset.img&&t.files[0]){
+    const k=t.dataset.img;
+    try{S.cfg[k]=await readImage(t.files[0],k==='icon'?'icon':'splash');saveCfg();const l=$('#upl-'+k);if(l){l.innerHTML=uplInner(k,k==='icon'?'App icon':'Splash screen','')+'<input type="file" id="f-'+k+'" accept="image/*" data-img="'+k+'" hidden>'}updPrev()}catch(err){toast('That image could not be read.','err')}
+  }
+  if(t.dataset.zip&&t.files[0]){if(!/\.zip$/i.test(t.files[0].name)){toast('Choose a .zip file.','err');return}if(t.files[0].size>25*1048576){toast('That ZIP is larger than 25 MB.','err');return}S.zip=t.files[0];updPrev();const h=t.parentNode.querySelector('.hint');if(h)h.textContent='Selected: '+S.zip.name+' ('+(S.zip.size/1048576).toFixed(1)+' MB)'}
+  if(t.id==='zipin'){const f=t.files[0];t.value='';importZip(f)}
+  if(t.id==='filein'){
+    const p=curProject();if(!p)return;let n=0;
+    for(const f of [...t.files]){try{p.files[f.name]=await readFileAny(f);n++}catch(err){}}
+    t.value='';p.updated=now();save();toast(n+' file'+(n===1?'':'s')+' added','ok');if(n)render();
+  }
+  if(t.id==='cv-min'||t.id==='cv-con'||t.id==='cv-wrap'){t.closest('.tg').classList.toggle('on',t.checked)}
+  if(t.id==='s-annon'||t.id==='s-maint'||t.id==='s-signup'){t.closest('.tg').classList.toggle('on',t.checked)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();const s=$('#side');if(s){s.classList.remove('open');$('#scrim').classList.remove('open')}}});
+function onSearch(){
+  const r=S.route;
+  if(r==='home'||r==='projects'){const l=$('#plist');if(l)l.innerHTML=plistHTML(r==='home'?5:0)}
+  else if(r==='store')$('#view').innerHTML=storeView();
+  else{S.focusQ=true;go('projects')}
+}
+
+/* ---------- router ---------- */
+const VIEWS={home:homeView,projects:projectsView,editor:editorView,build:buildView,console:consoleView,store:storeView,lab:labView,converter:converterView,wallet:walletView,payments:paymentsView,plans:plansView,profile:profileView,about:aboutView,admin:adminView};
+function go(r){if(location.hash==='#'+r)render();else location.hash=r}
+function render(){
+  const lm=localStorage.getItem('arapk.layout.v1')||'auto';document.documentElement.dataset.layout=lm==='auto'?(innerWidth<=959?'mobile':'desktop'):lm;
+  let r=(location.hash||'#home').slice(1).split('/')[0]||'home';
+  if(r!=='login'&&!VIEWS[r])r='home';
+  const fix=x=>{history.replaceState(null,'','#'+x);r=x};
+  if(['wallet','payments','profile','admin'].includes(r)&&!me()){S.next=r;S.authTab='login';fix('login')}
+  if(r==='admin'&&!isAdmin()){toast('Admin access only','err');fix('home')}
+  if(r==='console'&&!S.build)fix('build');
+  if(r==='login'&&me())fix('home');
+  const y=window.scrollY,same=S.last===r;S.route=r;
+  $('#root').innerHTML=r==='login'?authView():shell(VIEWS[r]());
+  const lsel=$('#layout-mode');if(lsel)lsel.value=localStorage.getItem('arapk.layout.v1')||'auto';
+  window.scrollTo(0,same?y:0);S.last=r;
+  const cv=$('#cv');if(cv)conveyor(cv,r==='login'?.78:null,r==='login'?.4:null);
+  if(r==='editor'){bindEditor();refreshPreview()}
+  if(r==='console'&&S.build&&S.build.state==='new'){runBuild(S.build)}else if(r==='console')paintConsole();
+  if(S.focusQ){S.focusQ=false;const i=$('#q');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
+}
+async function boot(){
+  const th=store.get(TKEY);if(th)document.documentElement.dataset.theme=th;
+  db=store.get(KEY);
+  if(!db||!db.users){db=await seed();save()}
+  db.hidden=db.hidden||[];db.templates=db.templates||[];db.log=db.log||[];
+  const sid=store.get(SKEY);if(sid&&db.users.some(u=>u.id===sid&&u.status!=='banned'))S.uid=sid;
+  S.cfg=Object.assign({},CFG0,store.get(CKEY)||{});
+  addEventListener('hashchange',render);
+  addEventListener('resize',()=>{if((localStorage.getItem('arapk.layout.v1')||'auto')==='auto'){document.documentElement.dataset.layout=innerWidth<=959?'mobile':'desktop'}});
+  document.addEventListener('change',e=>{if(e.target&&e.target.id==='layout-mode'){localStorage.setItem('arapk.layout.v1',e.target.value);document.documentElement.dataset.layout=e.target.value==='auto'?(innerWidth<=959?'mobile':'desktop'):e.target.value;render()}});
+  render();
+}
+boot();
+
+</script>
+
+</body>
+</html>
