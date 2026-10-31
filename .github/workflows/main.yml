@@ -250,12 +250,13 @@ jobs:
         run: |
           set -e
 
-          KEYSTORE="$RUNNER_TEMP/arapkbuild-release.jks"
+          KEYSTORE="$RUNNER_TEMP/arapkbuild-release.p12"
           STORE_PASS="$(openssl rand -hex 24)"
-          KEY_PASS="$(openssl rand -hex 24)"
+          KEY_PASS="$STORE_PASS"
 
           keytool -genkeypair \
             -v \
+            -storetype PKCS12 \
             -keystore "$KEYSTORE" \
             -alias arapkbuild \
             -keyalg RSA \
@@ -269,8 +270,7 @@ jobs:
           echo "KEYSTORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
           echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
 
-          echo "Signing key generated."
-
+          echo "APK signing key generated successfully."
       # 8. Sign APK using V1 and V2
       - name: Sign Release APK
         shell: bash
