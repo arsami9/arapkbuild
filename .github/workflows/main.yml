@@ -27,8 +27,8 @@ jobs:
           java-version: '17'
 
       # 3. Setup Android SDK
-      -
-      - name: Use Preinstalled Android SDK
+    
+ - name: Use Preinstalled Android SDK
         shell: bash
         run: |
           set -e
@@ -51,9 +51,7 @@ jobs:
             "build-tools;35.0.0"
 
           echo "Android SDK is ready."
-
-
-      # 4. Setup Gradle
+  # 4. Setup Gradle
       - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v5
         with:
